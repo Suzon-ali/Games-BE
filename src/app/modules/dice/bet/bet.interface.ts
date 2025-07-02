@@ -1,12 +1,14 @@
 export interface IBet {
   userAddress: string;
   betAmount: number;
-  rollOver: number;
+  rollTarget: number;
   clientSeed: string;
   nonce: number;
-
+  userName: string;
+  gameName: string;
   serverSeed: string;
   serverSeedHash: string;
+  condition: 'over' | 'under';
 
   result: {
     resultNumber: number;

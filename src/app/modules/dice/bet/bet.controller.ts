@@ -5,17 +5,25 @@ import { StatusCodes } from 'http-status-codes';
 import { BetServices } from './bet.service';
 import { BetModel } from './bet.model';
 import { getRollFromSeed } from '../../../../utils/provablyFair';
-import { broadcastNewBet } from '../../../websocket';
 
 const handleBet = catchAsync(async (req: Request, res: Response) => {
   const bet = req?.body;
-  broadcastNewBet(bet);
   const result = await BetServices.placeBet(bet);
 
   sendResponse(res, {
     statusCode: StatusCodes.CREATED,
     success: true,
     message: 'Bet placed succesfully!',
+    data: result,
+  });
+});
+
+const getAllBets = catchAsync(async (req: Request, res: Response) => {
+  const result = await BetServices.getAllBetsFromDB(req.query);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Bets fetched succesfully!',
     data: result,
   });
 });
@@ -41,4 +49,4 @@ export const verifyBet = async (req: Request, res: Response) => {
   });
 };
 
-export const BetControllers = { handleBet, verifyBet };
+export const BetControllers = { handleBet, verifyBet , getAllBets};

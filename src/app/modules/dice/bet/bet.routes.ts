@@ -13,6 +13,7 @@ router.post(
 );
 
 router.get('/next-seed', getNextSeedHash);
+router.get('/bets', BetControllers.getAllBets)
 
 //router.get('/verify/:betId', BetControllers.verifyBet);
 
