@@ -1,39 +1,30 @@
-// import { Server, Socket } from 'socket.io';
-// import { BetServices } from './bet.service';
+/* eslint-disable no-console */
+// Inside your socket setup, e.g. in bet.socket.ts or wherever you register handlers
 
-// export const registerBetSocketHandlers = (io: Server) => {
-//   io.on('connection', (socket: Socket) => {
-//     console.log('✅ WebSocket connected:', socket.id);
+import { Server, Socket } from 'socket.io';
+import { BetServices } from './bet.service';
 
-//     socket.on('place_bet', async (data, callback) => {
-//         try {
-//           const bet = await BetServices.placeBet(data);
-//           const result = bet.result;
-          
-//           socket.emit('bet_result', {
-//             resultNumber: result.resultNumber,
-//             isWin: result.isWin,
-//             profit: result.profit,
-//             newBalance: result.payoutToThePlayer,
-//             newNonce: data.nonce + 1,
-//           });
-      
-//           // 👇 CHECK IF CALLBACK EXISTS
-//           if (callback && typeof callback === 'function') {
-//             callback({ success: true });
-//           }
-//         } catch (error) {
-//           console.error('❌ place_bet error:', error);
-      
-//           // 👇 CHECK IF CALLBACK EXISTS
-//           if (callback && typeof callback === 'function') {
-//             callback({ success: false, message: error.message || 'Unknown error' });
-//           }
-//         }
-//       });
+export const registerBetSocketHandlers = (io: Server) => {
+  io.on('connection', (socket: Socket) => {
+    console.log('✅ WebSocket connected:', socket.id);
 
-//     socket.on('disconnect', () => {
-//       console.log('❌ WebSocket disconnected:', socket.id);
-//     });
-//   });
-// };
+    socket.on('place_bet', async (data, callback) => {
+      try {
+        const bet = await BetServices.placeBet(data);
+
+        // Send the result ONLY to the user who placed the bet via callback
+        callback({ success: true, data: bet });
+
+        // Optionally broadcast to all users about the new bet
+        io.emit('new_bet', bet);
+      } catch (error) {
+        console.error('❌ place_bet error:', error);
+        callback({ success: false, message: error.message || 'Bet error' });
+      }
+    });
+
+    socket.on('disconnect', () => {
+      console.log('❌ WebSocket disconnected:', socket.id);
+    });
+  });
+};

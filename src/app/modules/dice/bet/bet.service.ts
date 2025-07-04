@@ -72,7 +72,6 @@ const placeBet = async (
   });
 
   broadcastNewBet(bet)
-
   return bet;
 };
 
