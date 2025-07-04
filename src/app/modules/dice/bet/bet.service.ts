@@ -2,9 +2,9 @@ import crypto from 'crypto';
 import { BetModel } from './bet.model';
 import { IBet } from './bet.interface';
 import { getRollFromSeed } from '../../../../utils/provablyFair';
-import { broadcastNewBet } from '../../../websocket';
 import QueryBuilder from '../../../builder/QueryBuilder';
 import { betSearchFields } from './bet.constant';
+import { broadcastNewBet } from '../../../websocket';
 
 const HOUSE_EDGE = 0.01;
 
@@ -30,10 +30,9 @@ const placeBet = async (
     .createHash('sha256')
     .update(serverSeed)
     .digest('hex');
-  const clientSeedHex = Buffer.from(clientSeed, 'utf8').toString('hex');
 
   // 2. Generate provably fair roll
-  const resultNumber = getRollFromSeed(serverSeed, clientSeedHex, nonce);
+  const resultNumber = getRollFromSeed(serverSeed, clientSeed, nonce);
 
   // 3. Calculate win/loss
   const isWin =
@@ -61,7 +60,7 @@ const placeBet = async (
     nonce,
     serverSeed,
     serverSeedHash,
-    condition, // 🆕 Save condition
+    condition,
     result: {
       resultNumber,
       isWin,
@@ -72,13 +71,15 @@ const placeBet = async (
     },
   });
 
-  broadcastNewBet(bet);
-
+  broadcastNewBet(bet)
   return bet;
 };
 
 const getAllBetsFromDB = async (query: Record<string, unknown>) => {
-  const bookQuery = new QueryBuilder(BetModel.find().populate('userName'), query)
+  const bookQuery = new QueryBuilder(
+    BetModel.find().populate('userName'),
+    query,
+  )
     .search(betSearchFields.betSearchableFields)
     .filter()
     .sort()

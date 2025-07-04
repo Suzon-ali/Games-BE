@@ -1,29 +1,34 @@
+/* eslint-disable no-console */
 import { Server as HTTPServer } from 'http';
-import WebSocket, { WebSocketServer } from 'ws';
+import { Server, Socket } from 'socket.io';
+import { registerBetSocketHandlers } from '../modules/dice/bet/bet.socket';
+import { IBet } from '../modules/dice/bet/bet.interface';
 
-const clients = new Set<WebSocket>();
+export let io: Server;
 
-export const setupWebSocket = (server: HTTPServer) => {
-  const wss = new WebSocketServer({ server });
+export const initSocketServer = (server: HTTPServer): void => {
+  io = new Server(server, {
+    cors: {
+      origin: '*',
+      methods: ['GET', 'POST'],
+    },
+  });
+  console.log('🚀 Socket.IO server initialized');
 
-  wss.on('connection', (ws) => {
-    console.log('📡 New WebSocket client connected');
-    clients.add(ws);
+  registerBetSocketHandlers(io);
 
-    ws.on('close', () => {
-      clients.delete(ws);
-      console.log('🔌 WebSocket client disconnected');
+  io.on('connection', (socket: Socket) => {
+    console.log(`📡 Client connected: ${socket.id}`);
+
+    socket.on('disconnect', () => {
+      console.log(`🔌 Client disconnected: ${socket.id}`);
     });
   });
 };
 
-// Export this to use in any controller (like when a user places a bet)
-export const broadcastNewBet = (bet: any) => {
-  const data = JSON.stringify({ type: 'NEW_BET', payload: bet });
-
-  clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(data);
-    }
-  });
+export const broadcastNewBet = (bet: IBet): void => {
+  if (!io) {
+    return console.error('❌ Socket.IO not initialized. Cannot broadcast message.');
+  }
+  io.emit('new_bet', bet);
 };
