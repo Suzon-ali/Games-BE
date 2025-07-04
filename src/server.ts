@@ -8,9 +8,7 @@ async function main() {
   try {
     await mongoose.connect(config.database_url as string);
     const server = createServer(app);
-
-    setupWebSocket(server); // 👈 this will attach WebSocket
-
+    setupWebSocket(server); 
     server.listen(config.port, () => {
       console.log(`App is running on port ${config.port}`);
     });

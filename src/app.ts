@@ -1,4 +1,4 @@
-import express, { Application, NextFunction, Request, Response } from 'express';
+import express, { Application, Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import os from 'os';
@@ -22,7 +22,7 @@ app.use(cookieParser());
 //router
 app.use('/api/v1/', router);
 
-app.get('/', (req: Request, res: Response, next : NextFunction) => {
+app.get('/', (req: Request, res: Response) => {
   const currentDateTime = new Date().toISOString();
   const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   const serverHostname = os.hostname();

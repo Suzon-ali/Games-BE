@@ -13,8 +13,8 @@ router.post(
 );
 
 router.get('/next-seed', getNextSeedHash);
-router.get('/bets', BetControllers.getAllBets)
+router.get('/bets', BetControllers.getAllBets);
+router.post('/verify', BetControllers.verifyBet)
 
-//router.get('/verify/:betId', BetControllers.verifyBet);
 
 export const BetRoutes = router;

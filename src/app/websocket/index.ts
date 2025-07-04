@@ -20,10 +20,23 @@ export const setupWebSocket = (server: HTTPServer) => {
 // Export this to use in any controller (like when a user places a bet)
 export const broadcastNewBet = (bet: any) => {
   const data = JSON.stringify({ type: 'NEW_BET', payload: bet });
-
   clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(data);
     }
   });
 };
+// import { Server } from 'socket.io';
+// import http from 'http';
+// import { registerBetSocketHandlers } from '../modules/dice/bet/bet.socket';
+// export let io: Server;
+
+// export const initSocketServer = (server: http.Server) => {
+//   io = new Server(server, {
+//     cors: {
+//       origin: '*',
+//     },
+//   });
+//   registerBetSocketHandlers(io);
+//   console.log('🚀 WebSocket server initialized');
+// };

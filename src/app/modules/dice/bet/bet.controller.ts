@@ -3,8 +3,7 @@ import catchAsync from '../../../../utils/catchAsync';
 import sendResponse from '../../../../utils/sendResponse';
 import { StatusCodes } from 'http-status-codes';
 import { BetServices } from './bet.service';
-import { BetModel } from './bet.model';
-import { getRollFromSeed } from '../../../../utils/provablyFair';
+import { calculateHash, getRollFromHash } from '../../../../utils/provablyFair';
 
 const handleBet = catchAsync(async (req: Request, res: Response) => {
   const bet = req?.body;
@@ -28,25 +27,30 @@ const getAllBets = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-export const verifyBet = async (req: Request, res: Response) => {
-  const bet = await BetModel.findById(req.params.betId);
+const verifyBet = async (req: Request, res: Response) => {
+  const { clientSeed, serverSeed, nonce } = req.body;
 
-  if (!bet) return res.status(404).json({ message: 'Bet not found' });
+  if (!clientSeed || !serverSeed || nonce === undefined) {
+    res.status(400).json({ error: 'Missing parameters' });
+    // Use return on its own to stop execution
+    return;
+  }
 
-  const computedRoll = getRollFromSeed(
-    bet.serverSeed,
-    bet.clientSeed,
-    bet.nonce,
-  );
-
-  res.json({
-    computedRoll,
-    originalRoll: bet.result.resultNumber,
-    isMatch:
-      parseFloat(computedRoll.toFixed(2)) ===
-      parseFloat(bet.result.resultNumber.toFixed(2)),
-    bet,
-  });
+  try {
+    const hash = calculateHash(clientSeed, serverSeed, nonce);
+    const rolledNumber = getRollFromHash(hash);
+    // This part is already correct (no "return")
+    res.status(200).json({
+      success:true,
+      verified: true,
+      rolledNumber,
+      hash,
+    });
+  } catch (error) {
+    // It's better to let an error-handling middleware manage this
+    console.error('Error during hash calculation or roll:', error);
+    res.status(500).json({ error: 'An internal server error occurred.' });
+  }
 };
 
-export const BetControllers = { handleBet, verifyBet , getAllBets};
+export const BetControllers = { handleBet, verifyBet, getAllBets };
