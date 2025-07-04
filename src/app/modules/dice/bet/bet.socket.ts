@@ -19,7 +19,7 @@ export const registerBetSocketHandlers = (io: Server) => {
         io.emit('new_bet', bet);
       } catch (error) {
         console.error('❌ place_bet error:', error);
-        callback({ success: false, message: error.message || 'Bet error' });
+        callback({ success: false, message: error.message  || 'Bet error' });
       }
     });
 
