@@ -1,4 +1,4 @@
-const betSearchableFields = ['userName', 'userAddress'];
+const betSearchableFields = ['userName'];
 const excludeFields = ['search', 'sort', 'limit', 'page', 'fields'];
 
 export const betSearchFields = {

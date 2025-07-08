@@ -4,11 +4,13 @@ import sendResponse from '../../../../utils/sendResponse';
 import { StatusCodes } from 'http-status-codes';
 import { BetServices } from './bet.service';
 import { calculateHash, getRollFromHash } from '../../../../utils/provablyFair';
+import { JwtPayload } from 'jsonwebtoken';
+
 
 const handleBet = catchAsync(async (req: Request, res: Response) => {
+  const authUser = req.user as JwtPayload;
   const bet = req?.body;
-  const result = await BetServices.placeBet(bet);
-
+  const result = await BetServices.placeBet(bet, authUser);
   sendResponse(res, {
     statusCode: StatusCodes.CREATED,
     success: true,
@@ -53,4 +55,17 @@ const verifyBet = async (req: Request, res: Response) => {
   }
 };
 
-export const BetControllers = { handleBet, verifyBet, getAllBets };
+const getMyBets = catchAsync(async(req: Request, res: Response) =>{
+  const userId = req?.user?.userId;
+  const query = req.query;
+  const result = await BetServices.getMyBetsFromDB(userId , query);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Bets fetched succesfully!',
+    data: result,
+  });
+}
+)
+
+export const BetControllers = { handleBet, verifyBet, getAllBets, getMyBets };

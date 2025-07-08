@@ -11,13 +11,13 @@ const app: Application = express();
 
 //parser
 app.use(express.json());
+app.use(cookieParser());
 app.use(
   cors({
-    origin: ['http://localhost:3000','http://192.168.0.183:3000'],
+    origin: ['http://localhost:3000','http://localhost:3001', 'http://192.168.0.183:3000'],
     credentials: true,
   }),
 );
-app.use(cookieParser());
 
 //router
 app.use('/api/v1/', router);
@@ -44,11 +44,12 @@ app.get('/', (req: Request, res: Response) => {
         (serverUptime / 60) % 60,
       )} minutes`,
     },
-    
   });
 });
 
 app.use(globalErrorHandler);
 app.use(notFoundHandler);
+
+
 
 export default app;
