@@ -23,7 +23,7 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
     if (!user) throw new AppError(StatusCodes.NOT_FOUND, 'No user found', '');
 
     // Check balance
-    if (user.balance! < amount / 1000) {
+    if (user.balance! < amount / 10000) {
       throw new AppError(StatusCodes.BAD_REQUEST, 'Insufficient balance', '');
     }
 

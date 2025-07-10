@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/app/socket.ts
 import { Server as HTTPServer } from 'http';
 import { Server, Socket } from 'socket.io';
@@ -10,7 +11,7 @@ export let io: Server;
 export const initSocketServer = (server: HTTPServer): void => {
   io = new Server(server, {
     cors: {
-      origin: 'http://localhost:3000',
+      origin: ['http://localhost:3000', 'https://games-client-jp6a.vercel.app', 'http://192.168.0.183:3000'],
       methods: ['GET', 'POST'],
       credentials: true,
     },
@@ -63,7 +64,6 @@ export const initSocketServer = (server: HTTPServer): void => {
     socket.on('placeBet', async (data, callback) => {
       try {
         const result = await BetServices.placeBet(data, authUser);
-
         callback(result);
       } catch (error: any) {
         console.log('❌ Bet placement error:', error.message);
