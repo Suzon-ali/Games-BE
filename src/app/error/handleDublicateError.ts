@@ -3,9 +3,7 @@ import { TErrorSources, TGenericErrorResponse } from '../interface/error';
 
 const handleDublicateError = (err: any): TGenericErrorResponse => {
   const match = err.message.match(/"([^"]*)"/);
-
   const extractedMessage = match && match[1];
-
   const errorSources: TErrorSources = [
     {
       path: '',
