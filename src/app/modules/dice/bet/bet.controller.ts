@@ -7,10 +7,10 @@ import { calculateHash, getRollFromHash } from '../../../../utils/provablyFair';
 import { JwtPayload } from 'jsonwebtoken';
 
 
+
 const handleBet = catchAsync(async (req: Request, res: Response) => {
-  const authUser = req.user as JwtPayload;
   const bet = req?.body;
-  const result = await BetServices.placeBet(bet, authUser);
+  const result = await BetServices.placeBet(bet, req.user as JwtPayload);
   sendResponse(res, {
     statusCode: StatusCodes.CREATED,
     success: true,
@@ -43,7 +43,7 @@ const verifyBet = async (req: Request, res: Response) => {
     const rolledNumber = getRollFromHash(hash);
     // This part is already correct (no "return")
     res.status(200).json({
-      success:true,
+      success: true,
       verified: true,
       rolledNumber,
       hash,
@@ -55,17 +55,17 @@ const verifyBet = async (req: Request, res: Response) => {
   }
 };
 
-const getMyBets = catchAsync(async(req: Request, res: Response) =>{
-  const userId = req?.user?.userId;
+const getMyBets = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload;
+  const userId = user?.userId;
   const query = req.query;
-  const result = await BetServices.getMyBetsFromDB(userId , query);
+  const result = await BetServices.getMyBetsFromDB(userId, query);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
     message: 'Bets fetched succesfully!',
     data: result,
   });
-}
-)
+});
 
 export const BetControllers = { handleBet, verifyBet, getAllBets, getMyBets };

@@ -9,9 +9,10 @@ import { betSearchFields } from './bet.constant';
 import { BetModel } from './bet.model';
 import { io } from '../../../socket';
 import { IBet } from './bet.interface';
-import { JwtPayload } from 'jsonwebtoken';
 import { nextServerSeedHash } from '../fairness/seed.controller';
 import { Types } from 'mongoose';
+import { JwtPayload } from 'jsonwebtoken';
+
 
 const HOUSE_EDGE = 0.01;
 

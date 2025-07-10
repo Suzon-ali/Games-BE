@@ -7,7 +7,7 @@ const BetSchema = new Schema<IBet>(
       type: Types.ObjectId,
       ref: 'User',
       required: true,
-    },
+    } as any,
     userName: { type: String },
     gameName: { type: String },
     previousBalance: { type: Number, min: 0 },

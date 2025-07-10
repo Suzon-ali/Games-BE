@@ -10,7 +10,7 @@ import { User } from '../modules/User/user.model';
 import config from '../config';
 
 interface AuthRequest extends Request {
-  user?: JwtPayload & { email: string; roles: UserRole[] };
+  user: JwtPayload;
 }
 
 const auth = (...requiredUserRoles: UserRole[]) => {
@@ -82,7 +82,7 @@ const auth = (...requiredUserRoles: UserRole[]) => {
         roles: user.roles as UserRole[],
         userId: user._id!.toString(),
         userName: user.userName,
-        status: user.status,
+        status: user.status!,
       };
 
       next();

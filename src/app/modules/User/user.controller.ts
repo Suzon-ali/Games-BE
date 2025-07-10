@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import catchAsync from '../../../utils/catchAsync';
 import sendResponse from '../../../utils/sendResponse';
 import { UserServices } from './user.service';
+import { JwtPayload } from 'jsonwebtoken';
 
 
 const createUser = catchAsync(async (req: Request, res: Response) => {
@@ -32,7 +33,8 @@ const createUser = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getMyBalance = catchAsync(async (req: Request, res: Response) => {
-  const userId = req?.user?.userId;
+  const user = req.user as JwtPayload;
+  const userId = user?.userId;
   const result = await UserServices.getMyBalanceFromDB(userId);
   sendResponse(res, {
     success: true,
