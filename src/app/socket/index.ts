@@ -21,11 +21,9 @@ export const initSocketServer = (server: HTTPServer): void => {
 
   // ✅ Auth middleware with full debug
   io.use((socket, next) => {
-    const cookieHeader = socket.handshake.headers.cookie || '';
-    const token = cookieHeader
-      .split('; ')
-      .find((c) => c.startsWith('accessToken='))
-      ?.split('=')[1];
+    const token = socket.handshake.auth.token;
+
+    console.log({token})
 
     if (!token) {
       console.log('⛔ No token found in cookies. Rejecting connection.');
