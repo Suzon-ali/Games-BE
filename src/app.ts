@@ -19,6 +19,8 @@ app.use(
   }),
 );
 
+app.set("trust proxy", 1);
+
 //router
 app.use('/api/v1/', router);
 
