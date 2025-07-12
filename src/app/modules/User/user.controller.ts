@@ -19,7 +19,6 @@ const createUser = catchAsync(async (req: Request, res: Response) => {
     secure: true,
     httpOnly: true,
     sameSite: "none",
-    maxAge: 1000 * 60 * 60 * 24 * 365,
   });
 
   sendResponse(res, {
