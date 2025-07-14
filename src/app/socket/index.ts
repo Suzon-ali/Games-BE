@@ -15,6 +15,7 @@ export const initSocketServer = (server: HTTPServer): void => {
       origin: [
         'http://localhost:3000',
         'https://games-client-fqmo.vercel.app',
+        'https://games-client-production.up.railway.app',
         'http://192.168.0.183:3000',
       ],
       methods: ['GET', 'POST'],
