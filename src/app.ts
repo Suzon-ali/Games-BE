@@ -14,12 +14,12 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: ['http://localhost:3000','http://192.168.0.183:3000', 'https://games-client-jp6a.vercel.app'],
+    origin: ['http://localhost:3000','http://192.168.0.183:3000', 'https://games-client-jp6a.vercel.app', 'https://games-client-fqmo.vercel.app'],
     credentials: true,
   }),
 );
 
-app.set("trust proxy", true);
+app.set("trust proxy", 1);
 
 //router
 app.use('/api/v1/', router);

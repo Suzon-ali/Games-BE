@@ -3,34 +3,34 @@ import catchAsync from '../../../utils/catchAsync';
 import { AuthServices } from './auth.service';
 import sendResponse from '../../../utils/sendResponse';
 
-
 const loginUser = catchAsync(async (req, res) => {
   const user = req.body;
   const result = await AuthServices.loginUserIntoDB(user);
 
   const { refreshToken, accessToken, userInfo } = result;
 
-  res.cookie("refreshToken", refreshToken, {
+  res.cookie('refreshToken', refreshToken, {
     secure: true,
     httpOnly: true,
-    sameSite: "none",
+    sameSite: 'none',
+    //domain: 'games-client-jp6a.vercel.app',
   });
-  
+
   sendResponse(res, {
     success: true,
     message: 'User logged in succesfully!',
     statusCode: StatusCodes.OK,
-    data: { 
+    data: {
       userInfo,
       accessToken,
-      refreshToken 
+      refreshToken,
     },
   });
 });
 
 const refreshToken = catchAsync(async (req, res) => {
   const refreshToken =
-  req.cookies.refreshToken || req.headers['x-refresh-token'];
+    req.cookies.refreshToken || req.headers['x-refresh-token'];
   const result = await AuthServices.refreshToken(refreshToken);
   sendResponse(res, {
     success: true,
