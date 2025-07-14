@@ -25,7 +25,7 @@ export const initSocketServer = (server: HTTPServer): void => {
   console.log('🚀 Socket.IO server initialized');
 
   io.use((socket, next) => {
-    const rawCookie = socket.handshake.headers.cookie || '';
+    const rawCookie = socket.request.headers.cookie || '';
     const cookies = cookie.parse(rawCookie); // ✅ Now cookies is an object
 
     const token = cookies.accessToken;
