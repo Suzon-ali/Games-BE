@@ -14,7 +14,7 @@ export const initSocketServer = (server: HTTPServer): void => {
     cors: {
       origin: [
         'http://localhost:3000',
-        'https://games-client-jp6a.vercel.app',
+        'https://games-client-fqmo.vercel.app',
         'http://192.168.0.183:3000',
       ],
       methods: ['GET', 'POST'],
@@ -25,7 +25,7 @@ export const initSocketServer = (server: HTTPServer): void => {
   console.log('🚀 Socket.IO server initialized');
 
   io.use((socket, next) => {
-    const rawCookie = socket.request.headers.cookie || '';
+    const rawCookie = socket?.request?.headers?.cookie || '';
     const cookies = cookie.parse(rawCookie); // ✅ Now cookies is an object
 
     const token = cookies.accessToken;

@@ -7,7 +7,6 @@ import sendResponse from '../../../utils/sendResponse';
 import { UserServices } from './user.service';
 import { JwtPayload } from 'jsonwebtoken';
 
-
 const createUser = catchAsync(async (req: Request, res: Response) => {
   const paylod = req.body;
   const user = { ...paylod, id: uuidv4() };
@@ -15,10 +14,11 @@ const createUser = catchAsync(async (req: Request, res: Response) => {
 
   const { refreshToken, accessToken } = result;
 
-  res.cookie("refreshToken", refreshToken, {
+  res.cookie('refreshToken', refreshToken, {
     secure: true,
     httpOnly: true,
-    sameSite: "none",
+    sameSite: 'none',
+    //domain: 'games-client-jp6a.vercel.app',
   });
 
   sendResponse(res, {
@@ -45,5 +45,5 @@ const getMyBalance = catchAsync(async (req: Request, res: Response) => {
 
 export const UserControllers = {
   createUser,
-  getMyBalance
+  getMyBalance,
 };
