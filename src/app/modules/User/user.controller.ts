@@ -33,7 +33,6 @@ const createUser = catchAsync(async (req: Request, res: Response) => {
 
 const getMyBalance = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload;
-  console.log({user})
   const userId = user?.userId;
   const result = await UserServices.getMyBalanceFromDB(userId);
   sendResponse(res, {
