@@ -1,11 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Server as HTTPServer } from 'http';
-import { Server, Socket } from 'socket.io';
-import jwt, { JwtPayload } from 'jsonwebtoken';
-import { BetServices } from '../modules/dice/bet/bet.service';
-import config from '../config';
-import cookie  from 'cookie';
-
+import { Server as HTTPServer } from "http";
+import { Server, Socket } from "socket.io";
+import jwt, { JwtPayload } from "jsonwebtoken";
+import { BetServices } from "../modules/dice/bet/bet.service";
+import config from "../config";
+import cookie from "cookie";
 
 export let io: Server;
 
@@ -13,70 +12,85 @@ export const initSocketServer = (server: HTTPServer): void => {
   io = new Server(server, {
     cors: {
       origin: [
-        'http://localhost:3000',
-        'https://games-client-fqmo.vercel.app',
-        'https://games-client-production.up.railway.app',
-        'http://192.168.0.183:3000',
+        "http://localhost:3000",
+        "https://games-client-fqmo.vercel.app",
+        "https://games-client-production.up.railway.app",
+        "http://192.168.0.183:3000",
       ],
-      methods: ['GET', 'POST'],
+      methods: ["GET", "POST"],
       credentials: true,
     },
   });
 
-  console.log('🚀 Socket.IO server initialized');
+  console.log("🚀 Socket.IO server initialized");
 
+  // 🔐 Middleware for optional authentication
   io.use((socket, next) => {
-    const rawCookie = socket?.request?.headers?.cookie || '';
-    const cookies = cookie.parse(rawCookie); // ✅ Now cookies is an object
+    let token = socket.handshake.auth?.token;
 
-    const token = cookies.accessToken;
-
-    console.log({ cookies });
+    // Optionally fallback to cookie-based token
+    if (!token) {
+      const rawCookie = socket?.request?.headers?.cookie || "";
+      const cookiesParsed = cookie.parse(rawCookie);
+      token = cookiesParsed.accessToken;
+    }
 
     if (!token) {
-      console.log('⛔ No token found in cookies. Rejecting connection.');
-      return next(new Error('No token provided'));
+      console.log("👤 Guest socket connected (no token)");
+      return next(); // allow guest
     }
 
     try {
       const decoded = jwt.verify(
         token,
-        config.jwt_access_secret as string,
+        config.jwt_access_secret as string
       ) as JwtPayload;
-      console.log('✅ JWT Decoded Payload:', decoded);
+
+      console.log("✅ JWT Decoded Payload:", decoded);
+
       (socket as any).user = decoded;
-      next();
+      return next();
     } catch (err: any) {
-      console.log('❌ JWT Verification Failed:', err.message);
-      return next(new Error('Invalid token'));
+      console.log("❌ Invalid token, connecting as guest:", err.message);
+      // ⚠️ Still allow guest connection
+      return next(); // allow guest even if token is invalid
     }
   });
 
-  io.on('connection', (socket: Socket) => {
-    const authUser = (socket as any).user;
+  // 🧩 Main connection logic
+  io.on("connection", (socket: Socket) => {
+    const authUser = (socket as any).user || null;
     console.log(`📡 Client connected with Socket ID: ${socket.id}`);
-    console.log(`👤 Authenticated User:`, authUser);
+    console.log("👤 Authenticated User:", authUser || "Guest");
 
-    socket.on('join', (userId: string) => {
+    // ✅ Join room (only if authenticated)
+    socket.on("join", (userId: string) => {
       if (userId) {
         socket.join(userId);
         console.log(`✅ User ${userId} joined room`);
       } else {
-        console.log(`⚠️ 'join' event called without userId`);
+        console.log("⚠️ 'join' event called without userId");
       }
     });
 
-    socket.on('placeBet', async (data, callback) => {
+    // 🎲 Bet event (only authenticated)
+    socket.on("placeBet", async (data, callback) => {
+      if (!authUser) {
+        console.log("⛔ Guest tried to place a bet");
+        return callback({ success: false, error: "Unauthorized" });
+      }
+
       try {
         const result = await BetServices.placeBet(data, authUser);
         callback(result);
       } catch (error: any) {
-        console.log('❌ Bet placement error:', error.message);
+        console.log("❌ Bet placement error:", error.message);
         callback({ success: false, error: error.message });
       }
     });
 
-    socket.on('disconnect', () => {
+    // 🔌 Disconnect
+    socket.on("disconnect", () => {
       console.log(`🔌 Client disconnected: ${socket.id}`);
     });
   });
