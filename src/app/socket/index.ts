@@ -2,7 +2,6 @@
 import { Server as HTTPServer } from "http";
 import { Server, Socket } from "socket.io";
 import jwt, { JwtPayload } from "jsonwebtoken";
-import { BetServices } from "../modules/dice/bet/bet.service";
 import config from "../config";
 import cookie from "cookie";
 
@@ -70,22 +69,6 @@ export const initSocketServer = (server: HTTPServer): void => {
         console.log(`✅ User ${userId} joined room`);
       } else {
         console.log("⚠️ 'join' event called without userId");
-      }
-    });
-
-    // 🎲 Bet event (only authenticated)
-    socket.on("placeBet", async (data, callback) => {
-      if (!authUser) {
-        console.log("⛔ Guest tried to place a bet");
-        return callback({ success: false, error: "Unauthorized" });
-      }
-
-      try {
-        const result = await BetServices.placeBet(data, authUser);
-        callback(result);
-      } catch (error: any) {
-        console.log("❌ Bet placement error:", error.message);
-        callback({ success: false, error: error.message });
       }
     });
 
