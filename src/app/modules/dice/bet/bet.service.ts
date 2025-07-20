@@ -16,57 +16,57 @@ import { JwtPayload } from 'jsonwebtoken';
 
 const HOUSE_EDGE = 0.01;
 
-const placeBet = async (data: IBet, authUser: JwtPayload) => {
+export const placeBet = async (data: IBet, authUser: JwtPayload) => {
+  console.time('placeBet');
+
   try {
     const { amount, prediction, client_secret, type } = data;
 
+    console.time('fetchUser');
     const user = await User.findById(authUser?.userId);
+    console.timeEnd('fetchUser');
+
     if (!user) throw new AppError(StatusCodes.NOT_FOUND, 'No user found', '');
 
-    // Check balance
-    if (user.balance! < amount / 10000) {
+    const betAmount = amount / 10000;
+
+    if (user.balance! < betAmount) {
       throw new AppError(StatusCodes.BAD_REQUEST, 'Insufficient balance', '');
     }
 
-    // --- Generate server seed and hash
+    // --- Generate seeds and hashes
     const serverSeed = crypto.randomBytes(32).toString('hex');
-    const serverSeedHash = crypto
-      .createHash('sha256')
-      .update(serverSeed)
-      .digest('hex');
+    const serverSeedHash = crypto.createHash('sha256').update(serverSeed).digest('hex');
 
-    // --- Get raw result (0 - 1 float)
+   
+
+    // --- Generate result
     const rawResult = getRollFromSeed(serverSeed, client_secret, user.nonce!);
-    const rollNumber = rawResult / 100; // Full precision (0 - 100 float)
-    // --- Win/Loss logic
-    const rollTarget = prediction; // prediction should already be in 0–100 range
+    const rollNumber = rawResult / 100;
 
-    const isWin =
-      type === 'over' ? rollNumber > rollTarget : rollNumber < rollTarget;
-
-    const chance = type === 'over' ? 1 - rollTarget : rollTarget;
+    const isWin = type === 'over' ? rollNumber > prediction : rollNumber < prediction;
+    const chance = type === 'over' ? 1 - prediction : prediction;
     const payout = parseFloat(((1 / chance) * (1 - HOUSE_EDGE)).toFixed(4));
-    const profit = isWin ? (amount * (payout - 1)) / 10000 : -amount / 10000;
-    const payoutToPlayer = isWin ? amount / 10000 + profit : 0;
+
+    const profit = isWin ? (amount * (payout - 1)) / 10000 : -betAmount;
+    const payoutToPlayer = isWin ? betAmount + profit : 0;
     const multiplier = isWin ? parseFloat(payout.toFixed(2)) : 0;
+    const newBalance = user.balance! - betAmount + payoutToPlayer;
 
-    const newBalance = user.balance! - amount / 10000 + payoutToPlayer;
-
-    // --- Save bet to DB
-    const bet = await BetModel.create({
+    // --- Prepare bet document
+    const betData = {
       userId: authUser?.userId,
       userName: user.userName,
       gameName: 'Dice',
       previousBalance: user.balance,
       endingBalance: newBalance,
-      amount: amount / 10000,
+      amount: betAmount,
       prediction: prediction * 100,
       type,
       client_secret,
       nonce: user.nonce,
       serverSeed,
       serverSeedHash,
-
       result: {
         resultNumber: rawResult,
         isWin,
@@ -75,34 +75,44 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
         multiplier,
         payoutToThePlayer: payoutToPlayer,
       },
-    });
+    };
 
-    // --- Update user's balance and nonce
-    await User.findByIdAndUpdate(authUser?.userId, {
-      balance: newBalance,
-      nonce: user.nonce! + 1,
-    });
+    // --- Write DB updates in parallel
+    console.time('saveToDB');
+    const [bet] = await Promise.all([
+      BetModel.create(betData),
+      User.findByIdAndUpdate(authUser?.userId, {
+        balance: newBalance,
+        nonce: user.nonce! + 1,
+      }),
+    ]);
+    console.timeEnd('saveToDB');
 
-    // --- Emit real-time events
-    io.to(authUser?.userId.toString()).emit('wallet:update', {
-      balance: newBalance,
-    });
-    io.emit('bet:placed', {
-      userName: user.userName,
-      betId: bet._id.toString(),
-      amount: bet?.amount,
-      gameName: bet?.gameName,
-      result: {
-        resultNumber: rawResult,
-        isWin,
-        payout,
-        profit,
-        multiplier,
-        payoutToThePlayer: payoutToPlayer,
-      },
+    // --- Emit real-time updates (non-blocking)
+    setImmediate(() => {
+      io.to(authUser?.userId.toString()).emit('wallet:update', {
+        balance: newBalance,
+      });
+
+      io.emit('bet:placed', {
+        userName: user.userName,
+        betId: bet._id.toString(),
+        amount: bet?.amount,
+        gameName: bet?.gameName,
+        result: {
+          resultNumber: rawResult,
+          isWin,
+          payout,
+          profit,
+          multiplier,
+          payoutToThePlayer: payoutToPlayer,
+        },
+      });
     });
 
     // --- Return API response
+    console.timeEnd('placeBet');
+
     return {
       success: true,
       data: {
@@ -130,6 +140,7 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
       },
     };
   } catch (error: any) {
+    console.timeEnd('placeBet');
     throw new AppError(500, error?.message || 'Bet error', '');
   }
 };
