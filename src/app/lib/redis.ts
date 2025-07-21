@@ -1,18 +1,20 @@
 import Redis from 'ioredis';
 import config from '../config';
 
-const redisUrl =
-  config.node_env === 'production'
-    ? (process.env.REDIS_URL + '?family=0')!
-    : 'localhost';
+const redisUrl = config.redis_url;
 
 if (!redisUrl) {
-  console.error('❌REDIS_URL is undefined.');
+  console.error('❌ REDIS_URL is undefined.');
   throw new Error('REDIS_URL is not set in environment variables.');
 }
 
 console.log('✅ Connecting to Redis at:', redisUrl);
 
-export const redis = new Redis(redisUrl);
+const redisOptions = {
+  family: 0, // 🔥 This is the key fix — enables IPv6 resolution
+};
 
-export const redisSubscriber = new Redis(redisUrl);
+// Connect with full Redis URL and options
+export const redis = new Redis(redisUrl, redisOptions);
+export const redisSubscriber = new Redis(redisUrl, redisOptions);
+
