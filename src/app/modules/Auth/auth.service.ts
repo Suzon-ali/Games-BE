@@ -35,6 +35,7 @@ const loginUserIntoDB = async (payload: IUserLogin) => {
     email: user.email,
     roles: user.roles, // array of roles
     userId: user._id,
+    userName: user?.userName,
   };
 
   const accessToken = createToken(
@@ -52,7 +53,7 @@ const loginUserIntoDB = async (payload: IUserLogin) => {
     balance: user.balance,
     nonce: user.nonce,
   });
-  await redis.expire(userKey, 10);
+  await redis.expire(userKey, 20);
 
   return {
     userInfo: {
@@ -102,6 +103,7 @@ const refreshToken = async (token: string) => {
     email: user.email,
     roles: user.roles,
     userId: user._id,
+    userName: user?.userName,
   };
 
   const accessToken = createToken(
@@ -130,6 +132,7 @@ const forgetPassword = async (email: string) => {
     email: user.email,
     roles: user.roles,
     userId: user._id,
+    userName: user?.userName,
   };
 
   const resetToken = createToken(

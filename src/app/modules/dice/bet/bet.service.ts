@@ -14,6 +14,7 @@ import { Types } from 'mongoose';
 import { JwtPayload } from 'jsonwebtoken';
 import { redis } from '../../../lib/redis';
 import { getUserCache } from '../../../../utils/getUserCache';
+import { io } from '../../../socket';
 //import { io } from '../../../socket';
 
 const HOUSE_EDGE = 0.01;
@@ -277,15 +278,18 @@ const HOUSE_EDGE = 0.01;
 const placeBet = async (data: IBet, authUser: JwtPayload) => {
   const userId = authUser?.userId;
   const userKey = `user:${userId}`;
-  
   //const lockKey = `lock:${userId}`;
 
-  // Acquire a short lock to prevent spam (e.g. 500ms)
-  //const lock = await redis.set(lockKey, "1", "NX", "PX", 500);
-  //if (!lock) throw new Error("Please slow down.");
+  //Acquire a short lock to prevent spam (e.g. 500ms)
+  // const lock = await redis.set(lockKey, "1", {
+  //   NX: true,
+  //   PX: 200,
+  // });
+  
+  // if (!lock) throw new AppError(StatusCodes.BAD_REQUEST, 'Please slow down', '');
 
   // Step 1: Fetch from Redis
-  const {balance, nonce} = await getUserCache(userId);
+  const { balance, nonce } = await getUserCache(userId);
   const { amount, prediction, client_secret, type } = data;
   const betAmount = amount / 10000;
 
@@ -336,92 +340,110 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
     },
   };
 
-  // Step 3: Update Redis first
-  await redis.hmset(userKey, {
-    balance: newBalance,
-    nonce: nonce + 1,
-  });
-  await redis.expire(userKey, 10);
 
-  
+  // Step 3: Update Redis first
+  const pipeline = redis.multi();
+  pipeline.hset(
+    userKey,
+    'balance',
+    newBalance.toString(),
+    'nonce',
+    (nonce + 1).toString(),
+  );
+  pipeline.expire(userKey, 900);
+  await pipeline.exec();
 
   // Step 4: Save to MongoDB (non-blocking)
+
   setImmediate(async () => {
-    const [bet] = await Promise.all([
-      BetModel.create(betData),
-      User.findByIdAndUpdate(userId, {
-        balance: newBalance,
-        nonce: nonce + 1,
-      }),
-    ]);
+    try {
+      const [bet] = await Promise.all([
+        BetModel.create(betData),
+        User.findByIdAndUpdate(userId, {
+          balance: newBalance,
+          nonce: nonce + 1,
+        }),
+      ]);
+  
+      // Create a Redis pipeline for all publishes
+      const publishPipeline = redis.multi();
 
-    //Publish to Redis pub/sub
-    await redis.publish(
-      'latestBets',
-      JSON.stringify({
-        userName: authUser?.userName,
-        betId: bet._id.toString(),
-        amount: bet?.amount,
-        gameName: bet?.gameName,
-        result: {
-          resultNumber: rawResult,
-          isWin,
-          payout,
-          profit,
-          multiplier,
-          payoutToThePlayer: payoutToPlayer,
-        },
-      }),
-    );
-    await redis.publish(
-      `wallet:update:${userId}`,
-      JSON.stringify({
-        userId,
-        balance: newBalance,
-      }),
-    );
-
-    // You probably already have something like this
-    await redis.publish(
-      `user:bet:placed:${userId}`,
-      JSON.stringify({
-        betId: bet._id,
-        result: {
-          resultNumber: rawResult,
-          isWin,
-        },
-        userId,
-        userName: authUser?.userName,
-      }),
-    );
-
+      publishPipeline.publish(
+        `user:bet:placed:${userId}`,
+        JSON.stringify({
+          betId: bet._id.toString(), // Ensure bet._id is stringified here too
+          result: {
+            resultNumber: rawResult,
+            isWin,
+          },
+          userId,
+          userName: authUser?.userName,
+        }),
+      );
+  
+      publishPipeline.publish(
+        'latestBets',
+        JSON.stringify({
+          userName: authUser?.userName,
+          betId: bet._id.toString(),
+          amount: bet?.amount,
+          gameName: bet?.gameName,
+          result: {
+            resultNumber: rawResult,
+            isWin,
+            payout,
+            profit,
+            multiplier,
+            payoutToThePlayer: payoutToPlayer,
+          },
+        }),
+      );
+  
+      publishPipeline.publish(
+        `wallet:update:${userId}`,
+        JSON.stringify({
+          userId,
+          balance: newBalance,
+        }),
+      );
+      await publishPipeline.exec(); // Execute all publishes in one go
+  
+    } catch (err) {
+      console.error("Error in background task:", err);
+    }
   });
 
+  const bet = {
+    balance: {
+      formatted: `${(newBalance * 10000).toFixed(0)} USD`,
+      currency: 'USD',
+      amount: parseFloat((newBalance * 10000).toFixed(0)),
+    },
+    bet: {
+      hash: serverSeedHash,
+      nonce: nonce,
+      prediction: {
+        type,
+        amount: prediction,
+      },
+      client_secret,
+      server_secret: serverSeed,
+      result: {
+        type: isWin ? 'win' : 'lose',
+        value: parseFloat(rollNumber.toFixed(6)),
+        winnings: parseFloat((payoutToPlayer * 10000).toFixed(0)),
+      },
+    },
+    next_hash: nextServerSeedHash,
+  }
+
+  if (io && userId) {
+    io.to(userId).emit('dice:placeBet', bet);
+  }
+  
   return {
     success: true,
-    data: {
-      balance: {
-        formatted: `${(newBalance * 10000).toFixed(0)} USD`,
-        currency: 'USD',
-        amount: parseFloat((newBalance * 10000).toFixed(0)),
-      },
-      bet: {
-        hash: serverSeedHash,
-        nonce: nonce,
-        prediction: {
-          type,
-          amount: prediction,
-        },
-        client_secret,
-        server_secret: serverSeed,
-        result: {
-          type: isWin ? 'win' : 'lose',
-          value: parseFloat(rollNumber.toFixed(6)),
-          winnings: parseFloat((payoutToPlayer * 10000).toFixed(0)),
-        },
-      },
-      next_hash: nextServerSeedHash,
-    },
+    bet,
   };
 };
 
