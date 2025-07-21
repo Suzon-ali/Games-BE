@@ -48,13 +48,11 @@ const loginUserIntoDB = async (payload: IUserLogin) => {
     config.jwt_refresh_expires_in as string,
   );
 
-  const pipeline = redis.pipeline();
-  pipeline.hmset(userKey, {
+  await redis.hmset(userKey, {
     balance: user.balance,
     nonce: user.nonce,
   });
-  pipeline.expire(userKey, 5);
-  await pipeline.exec();
+  await redis.expire(userKey, 10);
 
   return {
     userInfo: {
