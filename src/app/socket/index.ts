@@ -5,6 +5,7 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import config from '../config';
 import cookie from 'cookie';
 import { redisSubscriber } from '../lib/redis';
+import { BetServices } from '../modules/dice/bet/bet.service';
 
 export let io: Server;
 
@@ -109,7 +110,6 @@ export const initSocketServer = (server: HTTPServer): void => {
     }
   });
 
-
   redisSubscriber.psubscribe('user:bet:placed:*', (err, count) => {
     if (err) {
       console.error('Redis psubscribe error:', err);
@@ -117,14 +117,31 @@ export const initSocketServer = (server: HTTPServer): void => {
       console.log(`📨 Subscribed to 'user:bet:placed:*' (${count} channels)`);
     }
   });
-  
+
   redisSubscriber.on('pmessage', (pattern, channel, message) => {
     const parsed = JSON.parse(message);
     const userId = parsed?.userId;
-  
+
     if (userId) {
-      io.to(userId).emit("bet:placed", parsed);
+      io.to(userId).emit('user:bet:placed', parsed);
     }
   });
+
+  io.on("connection", (socket) => {
+    socket.on("dice:placeBet", async (payload, callback) => {
+      try {
+        const authUser = (socket as any).user || null;
+        console.log({authUser},'here')
+        const betData = await BetServices.placeBet(payload, authUser);
+        
+        // send result back to the same client
+        callback({ success: true, data: { bet: betData } });
+      } catch (err: any) {
+        callback({ success: false, error: err.message });
+      }
+    });
+  });
   
+  
+
 };
