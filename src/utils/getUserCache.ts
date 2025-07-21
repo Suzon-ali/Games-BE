@@ -13,7 +13,7 @@ export async function getUserCache(userId: string) {
       const nonce = user.nonce || 0;
   
       redis.hmset(userKey, { balance: balance.toString(), nonce: nonce.toString() });
-      redis.expire(userKey, 5);
+      redis.expire(userKey, 10);
   
       return { balance, nonce };
     }

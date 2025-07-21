@@ -341,7 +341,9 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
     balance: newBalance,
     nonce: nonce + 1,
   });
-  await redis.expire(userKey, 5);
+  await redis.expire(userKey, 10);
+
+  
 
   // Step 4: Save to MongoDB (non-blocking)
   setImmediate(async () => {
