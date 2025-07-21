@@ -7,9 +7,11 @@ import { User } from '../User/user.model';
 import { sendEmail } from '../../../utils/sendMail';
 import { IUserLogin } from './auth.interface';
 import createToken from './auth.utils';
+import { redis } from '../../lib/redis';
 
 const loginUserIntoDB = async (payload: IUserLogin) => {
   const user = await User.isUserExistsByEmail(payload?.email);
+  const userKey = `user:${user?._id}`;
 
   // Check if user exists
   if (!user) {
@@ -45,6 +47,14 @@ const loginUserIntoDB = async (payload: IUserLogin) => {
     config.jwt_refresh_secret as string,
     config.jwt_refresh_expires_in as string,
   );
+
+  const pipeline = redis.pipeline();
+  pipeline.hmset(userKey, {
+    balance: user.balance,
+    nonce: user.nonce,
+  });
+  pipeline.expire(userKey, 5);
+  await pipeline.exec();
 
   return {
     userInfo: {
@@ -101,7 +111,6 @@ const refreshToken = async (token: string) => {
     config.jwt_access_secret as string,
     config.jwt_access_expires_in as string,
   );
-
 
   return {
     accessToken,
