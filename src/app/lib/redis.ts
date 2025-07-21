@@ -1,8 +1,8 @@
 import Redis from 'ioredis';
+import config from '../config';
 
-const redisUrl = process.env.REDIS_URL ?? 'redis://localhost:6379';
-console.log(process.env.REDIS_URL)
-
-export const redis = new Redis(redisUrl);
+export const redis = new Redis(
+  config.node_env === 'production' ? config.redis_url! : 'localhost',
+);
 
 export const redisSubscriber = new Redis();
