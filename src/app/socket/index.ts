@@ -48,17 +48,13 @@ export const initSocketServer = (server: HTTPServer): void => {
       (socket as any).user = decoded;
       return next();
     } catch (err: any) {
-      console.log('❌ Invalid token, connecting as guest:', err.message);
+      console.log('Invalid token, connecting as guest:', err.message);
       return next();
     }
   });
 
   // 🎧 Socket connection
   io.on('connection', (socket: Socket) => {
-    const authUser = (socket as any).user || null;
-    console.log(`📡 Client connected: ${socket.id}`);
-    console.log('👤 Authenticated User:', authUser || 'Guest');
-
     socket.on('join', (userId: string) => {
       if (userId) {
         socket.join(userId);
@@ -67,7 +63,6 @@ export const initSocketServer = (server: HTTPServer): void => {
         console.log("⚠️ 'join' event called without userId");
       }
     });
-
     socket.on('disconnect', () => {
       console.log(`🔌 Client disconnected: ${socket.id}`);
     });
@@ -131,9 +126,8 @@ export const initSocketServer = (server: HTTPServer): void => {
     socket.on("dice:placeBet", async (payload, callback) => {
       try {
         const authUser = (socket as any).user || null;
-        console.log({authUser},'here')
         const betData = await BetServices.placeBet(payload, authUser);
-        
+    
         // send result back to the same client
         callback({ success: true, data: { bet: betData } });
       } catch (err: any) {
