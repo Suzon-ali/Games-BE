@@ -25,8 +25,8 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
   const lockKey = `lock:${userId}`;
 
   // Acquire a short lock to prevent spam (e.g. 150ms)
-  const lock = await redis.set(lockKey, '1', 'PX', 550, 'NX');
-  if (!lock) {
+  const lock = await redis.set(lockKey, '1', 'PX', 100, 'NX');
+  if (lock) {
     console.log("locked")
     throw new AppError(StatusCodes.BAD_REQUEST, 'Please slow down', '');
   }
