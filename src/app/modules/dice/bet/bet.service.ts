@@ -22,16 +22,14 @@ const HOUSE_EDGE = 0.01;
 const placeBet = async (data: IBet, authUser: JwtPayload) => {
   const userId = authUser?.userId;
   const userKey = `user:${userId}`;
-  //const lockKey = `lock:${userId}`;
+  const lockKey = `lock:${userId}`;
 
-  //Acquire a short lock to prevent spam (e.g. 500ms)
-  // const lock = await redis.set(lockKey, "1", {
-  //   NX: true,
-  //   PX: 200,
-  // });
-
-  //const lock = await redis.set(lockKey, "1", "NX", "PX", 200); 
-  //if (!lock) throw new AppError(StatusCodes.BAD_REQUEST, 'Please slow down', '');
+  // Acquire a short lock to prevent spam (e.g. 150ms)
+  const lock = await redis.set(lockKey, '1', 'PX', 550, 'NX');
+  if (!lock) {
+    console.log("locked")
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Please slow down', '');
+  }
 
   // Step 1: Fetch from Redis
   const { balance, nonce } = await getUserCache(userId);
@@ -85,7 +83,6 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
     },
   };
 
-
   // Step 3: Update Redis first
   const pipeline = redis.multi();
   pipeline.hset(
@@ -109,7 +106,7 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
           nonce: nonce + 1,
         }),
       ]);
-  
+
       // Create a Redis pipeline for all publishes
       const publishPipeline = redis.multi();
 
@@ -125,7 +122,7 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
           userName: authUser?.userName,
         }),
       );
-  
+
       publishPipeline.publish(
         'latestBets',
         JSON.stringify({
@@ -143,7 +140,7 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
           },
         }),
       );
-  
+
       publishPipeline.publish(
         `wallet:update:${userId}`,
         JSON.stringify({
@@ -152,9 +149,8 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
         }),
       );
       await publishPipeline.exec(); // Execute all publishes in one go
-  
     } catch (err) {
-      console.error("Error in background task:", err);
+      console.error('Error in background task:', err);
     }
   });
 
@@ -180,12 +176,12 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
       },
     },
     next_hash: nextServerSeedHash,
-  }
+  };
 
   if (io && userId) {
     io.to(userId).emit('dice:placeBet', bet);
   }
-  
+
   return {
     success: true,
     bet,
