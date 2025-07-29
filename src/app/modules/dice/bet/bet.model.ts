@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Schema, Types, model } from 'mongoose';
 import { IBet } from './bet.interface';
 
@@ -18,6 +19,7 @@ const BetSchema = new Schema<IBet>(
     nonce: { type: Number, required: true },
     serverSeed: { type: String, required: true },
     serverSeedHash: { type: String, required: true },
+    
     type: {
       type: String,
       enum: ['over', 'under'],

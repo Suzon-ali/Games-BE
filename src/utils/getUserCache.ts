@@ -1,9 +1,16 @@
-import { redis } from "../app/lib/redis";
-import { User } from "../app/modules/User/user.model";
+import { redis } from '../app/lib/redis';
+import { User } from '../app/modules/User/user.model';
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export async function getUserCache(userId: string): Promise<{ balance: number; nonce: number }> {
+export async function getUserCache(
+  userId: string,
+): Promise<{
+  balance: number;
+  nonce: number;
+  serverSeed: string;
+  serverSeedHash: string;
+}> {
   const userKey = `user:${userId}`;
   const lockKey = `lock:cache:${userId}`;
 
@@ -11,10 +18,17 @@ export async function getUserCache(userId: string): Promise<{ balance: number; n
     // Try reading from cache first
     const cached = await redis.hgetall(userKey);
 
-    if (cached?.balance && cached?.nonce) {
+    if (
+      cached?.balance &&
+      cached?.nonce &&
+      cached?.serverSeed &&
+      cached?.serverSeedHash
+    ) {
       return {
         balance: parseFloat(cached.balance),
         nonce: parseInt(cached.nonce),
+        serverSeed: cached?.serverSeed,
+        serverSeedHash: cached?.serverSeedHash,
       };
     }
 
@@ -23,11 +37,15 @@ export async function getUserCache(userId: string): Promise<{ balance: number; n
 
     if (lock) {
       // Lock acquired: fetch from DB and cache the result
-      const user = await User.findById(userId).select('balance nonce').lean();
+      const user = await User.findById(userId)
+        .select('balance nonce serverSeed serverSeedHash')
+        .lean();
       if (!user) throw new Error('User not found in database');
 
       const balance = user.balance ?? 0;
       const nonce = user.nonce ?? 0;
+      const serverSeed = user.serverSeed ?? '';
+      const serverSeedHash = user.serverSeedHash ?? '';
 
       // Use pipeline for atomic update
       await redis
@@ -36,7 +54,7 @@ export async function getUserCache(userId: string): Promise<{ balance: number; n
         .expire(userKey, 900)
         .exec();
 
-      return { balance, nonce };
+      return { balance, nonce, serverSeed, serverSeedHash };
     } else {
       // Lock not acquired: wait and retry
       await sleep(100);

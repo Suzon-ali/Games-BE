@@ -30,6 +30,9 @@ const UserSchema = new Schema<IUser>(
     bonusEligible: { type: Boolean, default: true },
     serverSeed: { type: String }, // now optional
     serverSeedHash: { type: String }, // now optional
+    prevServerSeed: { type: String },
+    prevServerSeedHash: { type: String },
+    serverSeedRotatedAt: { type: String },
     nonce: { type: Number, default: 0 },
     clientSeed: { type: String }, // now optional
     isTestUser: { type: Boolean, default: false },

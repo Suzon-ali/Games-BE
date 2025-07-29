@@ -16,6 +16,7 @@ router.post(
 
 router.get('/next-server-seed-hash', getNextSeedHash);
 router.get('/bets', BetControllers.getAllBets);
+router.post('/bets/use-seed',auth('user'), BetControllers.rotateServerSeed);
 router.get('/getMyBets', auth('user'), BetControllers.getMyBets)
 router.post('/verify', BetControllers.verifyBet)
 

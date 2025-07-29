@@ -4,15 +4,18 @@ export interface IBet {
   userId: Types.ObjectId; // Reference to User
   userName: string;
   gameName: string;
-  previousBalance : number,
-  endingBalance: number,
+  previousBalance: number;
+  endingBalance: number;
   amount: number;
   prediction: number;
   client_secret: string;
   nonce: number;
   serverSeed?: string;
   serverSeedHash?: string;
+  prevServerSeed?: string;
   type: 'over' | 'under';
+  createdAt: string;
+  updatedAt: string;
   result?: {
     resultNumber: number;
     rollNumber: number;
@@ -23,8 +26,6 @@ export interface IBet {
     payoutToThePlayer: number;
   };
 }
-
-
 
 interface IBalance {
   formatted: string;
@@ -38,19 +39,19 @@ interface IPrediction {
 }
 
 interface IResult {
-  type: 'win' | 'lose' | 'draw'; 
+  type: 'win' | 'lose' | 'draw';
   value: number;
   winnings: number;
 }
 
 interface IBetResponse {
-  hash: string;                // like "4c66fa03-7b4a-4b6e-bd70-ebdabc3526e8"
-  nonce: number;               // e.g., 781
-  prediction: IPrediction;     // prediction object
-  client_secret: string;       // string
-  server_secret: string;       // string
-  result: IResult;             // result object
-  created_at: string;          // ISO date string
+  hash: string; // like "4c66fa03-7b4a-4b6e-bd70-ebdabc3526e8"
+  nonce: number; // e.g., 781
+  prediction: IPrediction; // prediction object
+  client_secret: string; // string
+  server_secret: string; // string
+  result: IResult; // result object
+  created_at: string; // ISO date string
 }
 
 export interface IFullBetResponse {
