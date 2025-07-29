@@ -7,15 +7,16 @@ import AppError from '../../../error/AppError';
 import { User } from '../../User/user.model';
 import { betSearchFields } from './bet.constant';
 import { BetModel } from './bet.model';
-//import { io } from '../../../socket';
 import { IBet } from './bet.interface';
-import { nextServerSeedHash } from '../fairness/seed.controller';
+import {
+  nextServerSeed,
+  nextServerSeedHash,
+} from '../fairness/seed.controller';
 import { Types } from 'mongoose';
 import { JwtPayload } from 'jsonwebtoken';
 import { redis } from '../../../lib/redis';
 import { getUserCache } from '../../../../utils/getUserCache';
 import { io } from '../../../socket';
-//import { io } from '../../../socket';
 
 const HOUSE_EDGE = 0.01;
 
@@ -31,6 +32,7 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
   }
 
   // Step 1: Fetch from Redis
+  let { serverSeed, serverSeedHash } = await getUserCache(userId);
   const { balance, nonce } = await getUserCache(userId);
   const { amount, prediction, client_secret, type } = data;
   const betAmount = amount / 10000;
@@ -40,11 +42,16 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
   }
 
   // Step 2: Calculate Result
-  const serverSeed = crypto.randomBytes(32).toString('hex');
-  const serverSeedHash = crypto
-    .createHash('sha256')
-    .update(serverSeed)
-    .digest('hex');
+  if (serverSeed === '') {
+    serverSeed = crypto.randomBytes(32).toString('hex');
+  }
+  if (serverSeedHash === '') {
+    serverSeedHash = crypto
+      .createHash('sha256')
+      .update(serverSeed)
+      .digest('hex');
+  }
+
   const rawResult = getRollFromSeed(serverSeed, client_secret, nonce);
   const rollNumber = rawResult / 100;
 
@@ -90,6 +97,10 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
     newBalance.toString(),
     'nonce',
     (nonce + 1).toString(),
+    'serverSeed',
+    serverSeed,
+    'serverSeedHash',
+    serverSeedHash,
   );
   pipeline.expire(userKey, 900);
   await pipeline.exec();
@@ -103,6 +114,8 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
         User.findByIdAndUpdate(userId, {
           balance: newBalance,
           nonce: nonce + 1,
+          serverSeed,
+          serverSeedHash,
         }),
       ]);
 
@@ -167,7 +180,7 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
         amount: prediction,
       },
       client_secret,
-      server_secret: serverSeed,
+      //server_secret: serverSeed,
       result: {
         type: isWin ? 'win' : 'lose',
         value: parseFloat(rollNumber.toFixed(6)),
@@ -229,7 +242,58 @@ const getMyBetsFromDB = async (
     .fields();
 
   const result = await betsQuery.modelQuery;
+  const user = await User.findById(userId).select('serverSeedRotatedAt').lean();
+
+  const firstBet = result[0];
+  const revealSeed =
+    firstBet?.updatedAt && user?.serverSeedRotatedAt
+      ? new Date(firstBet.updatedAt) < new Date(user.serverSeedRotatedAt)
+      : false;
+
+  if (!revealSeed && firstBet) {
+    firstBet.serverSeed = "notRevealed";
+  }
   return result;
 };
 
-export const BetServices = { placeBet, getAllBetsFromDB, getMyBetsFromDB };
+const rotateServerSeedIntoDB = async (user: JwtPayload) => {
+  const id = user.userId;
+  const userKey = `user:${id}`;
+  const currentUser = await User.findById(id);
+  const prevServerSeedHash = currentUser?.serverSeedHash;
+  const prevServerSeed = currentUser?.serverSeed;
+  if (!currentUser)
+    throw new AppError(StatusCodes.NOT_FOUND, 'User not found', '');
+  if (currentUser && currentUser.status === 'banned')
+    throw new AppError(StatusCodes.BAD_REQUEST, 'User is Banned', '');
+
+  const payload = {
+    prevServerSeedHash,
+    prevServerSeed,
+    serverSeed: nextServerSeed,
+    serverSeedHash: nextServerSeedHash,
+    nonce: 0,
+    serverSeedRotatedAt: new Date().toISOString(),
+  };
+  const result = await User.findByIdAndUpdate(id, payload, { new: true });
+  const pipeline = redis.multi();
+  pipeline.hset(userKey, {
+    prevServerSeed: currentUser.serverSeed ?? '',
+    prevServerSeedHash: currentUser.serverSeedHash ?? '',
+    serverSeed: nextServerSeed,
+    serverSeedHash: nextServerSeedHash,
+    nonce: '0',
+  });
+  pipeline.expire(userKey, 900);
+  await pipeline.exec();
+  return {
+    serverSeedHash: result?.serverSeedHash,
+  };
+};
+
+export const BetServices = {
+  placeBet,
+  getAllBetsFromDB,
+  getMyBetsFromDB,
+  rotateServerSeedIntoDB,
+};

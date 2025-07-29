@@ -4,7 +4,7 @@ import { Request, Response } from 'express';
 import sendResponse from '../../../../utils/sendResponse';
 import { StatusCodes } from 'http-status-codes';
 
-const nextServerSeed = crypto.randomBytes(32).toString('hex');
+export const nextServerSeed = crypto.randomBytes(32).toString('hex');
 export const nextServerSeedHash = crypto
   .createHash('sha256')
   .update(nextServerSeed)
@@ -18,3 +18,6 @@ export const getNextSeedHash = async (req: Request, res: Response) => {
     data: { nextServerSeedHash },
   });
 };
+
+
+

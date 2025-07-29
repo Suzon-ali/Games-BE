@@ -21,7 +21,6 @@ export const getRollFromHash = (hash: string): number => {
 
 //get rollfromseed
 
-
 export const getRollFromSeed = (
   serverSeed: string,
   clientSeed: string,

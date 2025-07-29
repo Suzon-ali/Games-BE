@@ -18,7 +18,6 @@ const createUser = catchAsync(async (req: Request, res: Response) => {
     secure: true,
     httpOnly: true,
     sameSite: 'none',
-    //domain: 'games-client-jp6a.vercel.app',
   });
 
   sendResponse(res, {
@@ -43,7 +42,20 @@ const getMyBalance = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const logOut = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload;
+  const userId = user?.userId;
+  const result = await UserServices.userLogout(userId);
+  sendResponse(res, {
+    success: true,
+    message: 'Logged Out Successfully!',
+    statusCode: StatusCodes.OK,
+    data: result,
+  });
+});
+
 export const UserControllers = {
   createUser,
   getMyBalance,
+  logOut,
 };

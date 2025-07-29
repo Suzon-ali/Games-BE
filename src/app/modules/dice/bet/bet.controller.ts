@@ -6,8 +6,6 @@ import { BetServices } from './bet.service';
 import { calculateHash, getRollFromHash } from '../../../../utils/provablyFair';
 import { JwtPayload } from 'jsonwebtoken';
 
-
-
 const handleBet = catchAsync(async (req: Request, res: Response) => {
   const bet = req?.body;
   const result = await BetServices.placeBet(bet, req.user as JwtPayload);
@@ -68,4 +66,20 @@ const getMyBets = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-export const BetControllers = { handleBet, verifyBet, getAllBets, getMyBets };
+const rotateServerSeed = catchAsync(async (req: Request, res: Response) => {
+  const result = await BetServices.rotateServerSeedIntoDB(req.user as JwtPayload);
+  sendResponse(res, {
+    statusCode: StatusCodes.CREATED,
+    success: true,
+    message: 'Server seed changed changed succesfully!',
+    data: result,
+  });
+});
+
+export const BetControllers = {
+  handleBet,
+  verifyBet,
+  getAllBets,
+  getMyBets,
+  rotateServerSeed,
+};

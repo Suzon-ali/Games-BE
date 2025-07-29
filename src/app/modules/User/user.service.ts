@@ -4,6 +4,7 @@ import AppError from '../../error/AppError';
 import { IUser } from './user.interface';
 import { User } from './user.model';
 import { AuthServices } from '../Auth/auth.service';
+import { redis } from '../../lib/redis';
 
 const createUserIntoDB = async (payload: IUser) => {
   try {
@@ -51,7 +52,14 @@ const getMyBalanceFromDB = async (userId: string) => {
   }
 };
 
+const userLogout = async (userId: string) => {
+  const userKey = `user:${userId}`;
+  const result = await redis.del(userKey);
+  return result;
+};
+
 export const UserServices = {
   createUserIntoDB,
   getMyBalanceFromDB,
+  userLogout
 };

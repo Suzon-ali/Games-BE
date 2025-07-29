@@ -13,5 +13,6 @@ router.post(
   UserControllers.createUser,
 );
 router.get('/mybalance', auth('user'), UserControllers.getMyBalance);
+router.post('/logout', auth('user'), UserControllers.logOut);
 
 export const UserRoutes = router;

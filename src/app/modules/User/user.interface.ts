@@ -13,12 +13,15 @@ export interface IUser {
   status?: UserStatus;
   kycStatus?: KYCStatus;
   password: string;
-  balance?: number; 
-  bonusBalance?: number; 
+  balance?: number;
+  bonusBalance?: number;
   vipLevel?: number;
   bonusEligible?: boolean;
   serverSeed?: string;
   serverSeedHash?: string;
+  prevServerSeed?: string;
+  prevServerSeedHash?: string;
+  serverSeedRotatedAt?: string;
   nonce?: number;
   clientSeed?: string;
   isTestUser?: boolean;
