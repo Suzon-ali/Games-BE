@@ -66,8 +66,24 @@ const getMyBets = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getNextSeedHash = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await BetServices.getNextSeedHashFromDB(
+      req.user as JwtPayload,
+    );
+    sendResponse(res, {
+      statusCode: StatusCodes.OK,
+      success: true,
+      message: 'Next ServerSeedHash Created!',
+      data: result,
+    });
+  },
+);
+
 const rotateServerSeed = catchAsync(async (req: Request, res: Response) => {
-  const result = await BetServices.rotateServerSeedIntoDB(req.user as JwtPayload);
+  const result = await BetServices.rotateServerSeedIntoDB(
+    req.user as JwtPayload,
+  );
   sendResponse(res, {
     statusCode: StatusCodes.CREATED,
     success: true,
@@ -82,4 +98,5 @@ export const BetControllers = {
   getAllBets,
   getMyBets,
   rotateServerSeed,
+  getNextSeedHash
 };
