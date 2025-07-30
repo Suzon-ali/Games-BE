@@ -8,15 +8,12 @@ import { User } from '../../User/user.model';
 import { betSearchFields } from './bet.constant';
 import { BetModel } from './bet.model';
 import { IBet } from './bet.interface';
-import {
-  nextServerSeed,
-  nextServerSeedHash,
-} from '../fairness/seed.controller';
 import { Types } from 'mongoose';
 import { JwtPayload } from 'jsonwebtoken';
 import { redis } from '../../../lib/redis';
 import { getUserCache } from '../../../../utils/getUserCache';
 import { io } from '../../../socket';
+import { generateNewSeed } from '../fairness/seed.controller';
 
 const HOUSE_EDGE = 0.01;
 
@@ -24,6 +21,7 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
   const userId = authUser?.userId;
   const userKey = `user:${userId}`;
   const lockKey = `lock:${userId}`;
+  const { nextServerSeed, nextServerSeedHash } = generateNewSeed();
 
   // Acquire a short lock to prevent spam (e.g. 150ms)
   const lock = await redis.set(lockKey, '1', 'PX', 150, 'NX');
@@ -101,6 +99,10 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
     serverSeed,
     'serverSeedHash',
     serverSeedHash,
+    'nextServerSeed',
+    nextServerSeed,
+    'nextServerSeedHash',
+    nextServerSeedHash,
   );
   pipeline.expire(userKey, 900);
   await pipeline.exec();
@@ -116,6 +118,8 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
           nonce: nonce + 1,
           serverSeed,
           serverSeedHash,
+          nextServerSeed,
+          nextServerSeedHash,
         }),
       ]);
 
@@ -208,7 +212,7 @@ const getAllBetsFromDB = async (query: Record<string, unknown>) => {
     .paginate()
     .fields();
 
-  const result = await betsQuery.modelQuery;
+  const result = await betsQuery.modelQuery.select('-serverSeed -clientSeed');
   const transformed = result?.map((bet: any) => ({
     userName: bet?.userId?.userName || bet.userName,
     betId: bet?._id?.toString(),
@@ -251,7 +255,7 @@ const getMyBetsFromDB = async (
       : false;
 
   if (!revealSeed && firstBet) {
-    firstBet.serverSeed = "notRevealed";
+    firstBet.serverSeed = 'notRevealed';
   }
   return result;
 };
@@ -270,8 +274,8 @@ const rotateServerSeedIntoDB = async (user: JwtPayload) => {
   const payload = {
     prevServerSeedHash,
     prevServerSeed,
-    serverSeed: nextServerSeed,
-    serverSeedHash: nextServerSeedHash,
+    serverSeed: currentUser?.nextServerSeed,
+    serverSeedHash: currentUser?.nextServerSeedHash,
     nonce: 0,
     serverSeedRotatedAt: new Date().toISOString(),
   };
@@ -280,8 +284,8 @@ const rotateServerSeedIntoDB = async (user: JwtPayload) => {
   pipeline.hset(userKey, {
     prevServerSeed: currentUser.serverSeed ?? '',
     prevServerSeedHash: currentUser.serverSeedHash ?? '',
-    serverSeed: nextServerSeed,
-    serverSeedHash: nextServerSeedHash,
+    serverSeed: currentUser?.nextServerSeed ?? '',
+    serverSeedHash: currentUser?.nextServerSeedHash ?? '',
     nonce: '0',
   });
   pipeline.expire(userKey, 900);
@@ -291,9 +295,26 @@ const rotateServerSeedIntoDB = async (user: JwtPayload) => {
   };
 };
 
+const getNextSeedHashFromDB = async (user: JwtPayload) => {
+  const id = user.userId;
+  const currentUser = await User.findById(id);
+
+  if (!currentUser)
+    throw new AppError(StatusCodes.NOT_FOUND, 'User not found', '');
+
+  if (currentUser.status === 'banned')
+    throw new AppError(StatusCodes.BAD_REQUEST, 'User is banned', '');
+
+  return {
+    nextServerSeedHash: currentUser?.nextServerSeedHash,
+  };
+};
+
+
 export const BetServices = {
   placeBet,
   getAllBetsFromDB,
   getMyBetsFromDB,
   rotateServerSeedIntoDB,
+  getNextSeedHashFromDB
 };

@@ -33,6 +33,8 @@ const UserSchema = new Schema<IUser>(
     prevServerSeed: { type: String },
     prevServerSeedHash: { type: String },
     serverSeedRotatedAt: { type: String },
+    nextServerSeed: { type: String },
+    nextServerSeedHash: { type: String },
     nonce: { type: Number, default: 0 },
     clientSeed: { type: String }, // now optional
     isTestUser: { type: Boolean, default: false },

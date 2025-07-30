@@ -22,6 +22,8 @@ export interface IUser {
   prevServerSeed?: string;
   prevServerSeedHash?: string;
   serverSeedRotatedAt?: string;
+  nextServerSeed?: string;
+  nextServerSeedHash?: string;
   nonce?: number;
   clientSeed?: string;
   isTestUser?: boolean;
