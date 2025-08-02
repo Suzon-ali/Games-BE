@@ -14,6 +14,7 @@ import { redis } from '../../../lib/redis';
 import { getUserCache } from '../../../../utils/getUserCache';
 import { io } from '../../../socket';
 import { generateNewSeed } from '../fairness/seed.controller';
+import config from '../../../config';
 
 const HOUSE_EDGE = 0.01;
 
@@ -21,6 +22,8 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
   const userId = authUser?.userId;
   const userKey = `user:${userId}`;
   const lockKey = `lock:${userId}`;
+  const maxBetAmount = config.max_bet ?? 1000;
+  const minBetAmount = config.min_bet ?? 0.01;
   const { nextServerSeed, nextServerSeedHash } = generateNewSeed();
 
   // Acquire a short lock to prevent spam (e.g. 150ms)
@@ -33,10 +36,19 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
   let { serverSeed, serverSeedHash } = await getUserCache(userId);
   const { balance, nonce } = await getUserCache(userId);
   const { amount, prediction, client_secret, type } = data;
-  const betAmount = amount / 10000;
+  let betAmount: number = amount / 10000;
 
   if (balance < betAmount) {
     throw new AppError(StatusCodes.BAD_REQUEST, 'Insufficient balance', '');
+  }
+
+  if (betAmount > (maxBetAmount as number)) {
+    betAmount = maxBetAmount as number;
+  }
+
+  if (betAmount < (minBetAmount as number)) {
+    betAmount = minBetAmount as number;
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Bet is less than min', '');
   }
 
   // Step 2: Calculate Result
@@ -184,7 +196,6 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
         amount: prediction,
       },
       client_secret,
-      //server_secret: serverSeed,
       result: {
         type: isWin ? 'win' : 'lose',
         value: parseFloat(rollNumber.toFixed(6)),
@@ -310,11 +321,10 @@ const getNextSeedHashFromDB = async (user: JwtPayload) => {
   };
 };
 
-
 export const BetServices = {
   placeBet,
   getAllBetsFromDB,
   getMyBetsFromDB,
   rotateServerSeedIntoDB,
-  getNextSeedHashFromDB
+  getNextSeedHashFromDB,
 };

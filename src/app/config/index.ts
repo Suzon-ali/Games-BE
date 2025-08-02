@@ -19,4 +19,6 @@ export default {
   cloudinary_name: process.env.CLOUDYNARY_NAME,
   cloduinary_api_key: process.env.CLOUDYNARY_API_KEY,
   cloduinary_api_secret: process.env.CLOUDYNARY_API_SECRET,
+  min_bet: process.env.MIN_BET,
+  max_bet: process.env.MAX_BET,
 };
