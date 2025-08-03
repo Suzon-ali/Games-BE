@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Query } from 'mongoose';
 
 class QueryBuilder<T> {
@@ -28,23 +29,43 @@ class QueryBuilder<T> {
   filter() {
     const queryObj = { ...this.query };
     const excludeFields = ['search', 'sort', 'limit', 'page', 'fields'];
-  
     excludeFields.forEach((field) => delete queryObj[field]);
-  
-    // Build a filter object dynamically
-    const filterConditions: Record<string, unknown> = {};
-  
+
+    const filterConditions: Record<string, any> = {};
+
+    const parseValue = (value: unknown) => {
+        if (typeof value === 'string' && !isNaN(Number(value)) && !isNaN(parseFloat(value))) {
+            return Number(value);
+        }
+        return value;
+    };
+
     for (const key in queryObj) {
-      if (queryObj[key]) {
-        filterConditions[key] = queryObj[key];
-      }
+        const value = parseValue(queryObj[key]);
+
+        // Handle operator-based filters like minMultiplier[gt]
+        if (key.includes('[') && key.includes(']')) {
+            const [field, op] = key.split('[');
+            const operator = `$${op.replace(']', '')}`;
+            
+            if (!filterConditions[field]) {
+                filterConditions[field] = {};
+            }
+
+            filterConditions[field][operator] = value;
+
+        } else {
+            // For normal filters including dot notation like "result.multiplier"
+            filterConditions[key] = value;
+        }
     }
-  
+
     this.modelQuery = this.modelQuery.find(filterConditions);
     return this;
-  }
-  
+}
 
+  
+  
   // Sort bets specific fields and order
   sort() {
     const sortBy = (this?.query?.sortBy as string) || 'createdAt';
