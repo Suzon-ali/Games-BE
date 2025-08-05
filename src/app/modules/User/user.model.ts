@@ -79,6 +79,13 @@ UserSchema.statics.isUserExistsById = async function (id) {
   return existingUser;
 };
 
+UserSchema.statics.isUserExistsByUserName = async function (userName) {
+  const existingUser = await User.findOne({
+    userName: userName,
+  }).select('+password');
+  return existingUser;
+};
+
 UserSchema.statics.isPasswordMatched = async function (
   plainTextPassword,
   hashedPassword,
