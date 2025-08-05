@@ -10,7 +10,13 @@ import createToken from './auth.utils';
 import { redis } from '../../lib/redis';
 
 const loginUserIntoDB = async (payload: IUserLogin) => {
-  const user = await User.isUserExistsByEmail(payload?.email);
+  let user = null;
+  if(payload?.email && payload?.email !== ''){
+    user = await User.isUserExistsByEmail(payload?.email);
+  }
+  if(payload?.userName && payload?.userName !== ''){
+    user = await User.isUserExistsByUserName(payload?.userName);
+  }
   const userKey = `user:${user?._id}`;
 
   // Check if user exists

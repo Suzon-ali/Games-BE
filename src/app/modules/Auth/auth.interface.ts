@@ -1,7 +1,8 @@
 import { UserRole, UserStatus } from "../User/user.interface";
 
 export interface IUserLogin {
-  email: string;
+  email?: string;
+  userName?: string;
   password: string;
 }
 
