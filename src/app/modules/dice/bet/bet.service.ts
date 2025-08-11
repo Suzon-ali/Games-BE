@@ -158,6 +158,7 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
           betId: bet._id.toString(),
           amount: bet?.amount,
           gameName: bet?.gameName,
+          createdAt: bet?.createdAt,
           result: {
             resultNumber: rawResult,
             isWin,
@@ -229,6 +230,7 @@ const getAllBetsFromDB = async (query: Record<string, unknown>) => {
     betId: bet?._id?.toString(),
     amount: bet?.amount,
     gameName: bet?.gameName,
+    createdAt:bet?.createdAt,
     result: {
       resultNumber: bet.result?.resultNumber,
       isWin: bet.result?.isWin,
