@@ -8,11 +8,14 @@ import { redis } from '../../lib/redis';
 
 const createUserIntoDB = async (payload: IUser) => {
   try {
-    const existingUser = await User.isUserExistsByEmail(payload.email);
+    let existingUser = await User.isUserExistsByEmail(payload.email);
+    if(!existingUser){
+      existingUser = await User.isUserExistsByUserName(payload.userName);
+    }
     if (existingUser) {
       throw new AppError(
         StatusCodes.NOT_ACCEPTABLE,
-        'Email is already registered',
+        'User is already registered',
         '',
       );
     }
