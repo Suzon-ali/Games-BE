@@ -54,8 +54,20 @@ const logOut = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getUserBetStats = catchAsync(async (req: Request, res: Response) => {
+  const userName = req.body.userName;
+  const result = await UserServices.getUserBetStatsFromDB(userName);
+  sendResponse(res, {
+    success: true,
+    message: 'User info fetched!',
+    statusCode: StatusCodes.OK,
+    data: result,
+  });
+});
+
 export const UserControllers = {
   createUser,
   getMyBalance,
   logOut,
+  getUserBetStats
 };

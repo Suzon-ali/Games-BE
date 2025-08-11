@@ -5,11 +5,12 @@ import { IUser } from './user.interface';
 import { User } from './user.model';
 import { AuthServices } from '../Auth/auth.service';
 import { redis } from '../../lib/redis';
+import { BetModel } from '../dice/bet/bet.model';
 
 const createUserIntoDB = async (payload: IUser) => {
   try {
     let existingUser = await User.isUserExistsByEmail(payload.email);
-    if(!existingUser){
+    if (!existingUser) {
       existingUser = await User.isUserExistsByUserName(payload.userName);
     }
     if (existingUser) {
@@ -21,7 +22,7 @@ const createUserIntoDB = async (payload: IUser) => {
     }
     const newUser = new User(payload);
     const result = await newUser.save();
-    
+
     return await AuthServices.loginUserIntoDB({
       email: result?.email,
       password: payload?.password as string,
@@ -42,7 +43,7 @@ const createUserIntoDB = async (payload: IUser) => {
 const getMyBalanceFromDB = async (userId: string) => {
   try {
     if (!userId) {
-      throw new AppError( StatusCodes.UNAUTHORIZED ,'Invalid user ID', '');
+      throw new AppError(StatusCodes.UNAUTHORIZED, 'Invalid user ID', '');
     }
     const user = await User.findById(userId).select('balance');
     if (!user) {
@@ -61,8 +62,39 @@ const userLogout = async (userId: string) => {
   return result;
 };
 
+const getUserBetStatsFromDB = async (userName: string) => {
+  const userExists = await User.isUserExistsByUserName(userName);
+  if (!userExists) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'User not found', '');
+  }
+  const user = await User.findOne({userName});
+
+  try {
+    const result = await BetModel.aggregate([
+      { $match: { userName } },
+      {
+        $group: {
+          _id: '$userName', // Group by userName
+          totalBets: { $sum: 1 },
+          totalWagered: { $sum: '$amount' },
+        },
+      },
+    ]);
+
+    return {
+      userName,
+      totalBets: result.length > 0 ? result[0].totalBets : 0,
+      totalWagered: result.length > 0 ? result[0].totalWagered : 0,
+      createdAt: user?.createdAt
+    };
+  } catch (error) {
+    console.error('Error fetching user bet stats:', error);
+  }
+};
+
 export const UserServices = {
   createUserIntoDB,
   getMyBalanceFromDB,
-  userLogout
+  userLogout,
+  getUserBetStatsFromDB,
 };
