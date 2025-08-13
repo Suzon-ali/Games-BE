@@ -6,6 +6,7 @@ import config from '../config';
 import cookie from 'cookie';
 import { redisSubscriber } from '../lib/redis';
 import { BetServices } from '../modules/dice/bet/bet.service';
+import { ChatServices } from '../modules/Chat/chat.service';
 
 export let io: Server;
 
@@ -122,12 +123,12 @@ export const initSocketServer = (server: HTTPServer): void => {
     }
   });
 
-  io.on("connection", (socket) => {
-    socket.on("dice:placeBet", async (payload, callback) => {
+  io.on('connection', (socket) => {
+    socket.on('dice:placeBet', async (payload, callback) => {
       try {
         const authUser = (socket as any).user || null;
         const betData = await BetServices.placeBet(payload, authUser);
-    
+
         // send result back to the same client
         callback({ success: true, data: { bet: betData } });
       } catch (err: any) {
@@ -135,7 +136,41 @@ export const initSocketServer = (server: HTTPServer): void => {
       }
     });
   });
-  
-  
 
+  io.on('connection', (socket) => {
+    socket.on('sent:Message', async (payload, callback) => {
+      try {
+        const authUser = (socket as any).user || null;
+        const message = payload.message;
+        const messageData = await ChatServices.createChatIntoDB(
+          authUser,
+          message,
+        );
+        // send result back to the same client
+        callback({ success: true, data: { message: messageData } });
+      } catch (err: any) {
+        callback({ success: false, error: err.message });
+      }
+    });
+  });
+
+  redisSubscriber.subscribe('newMessage', (err, count) => {
+    if (err) {
+      console.error('❌ Redis subscription error:', err);
+    } else {
+      console.log(`📨 Subscribed to 'newMessage' (${count} channels)`);
+    }
+  });
+
+  redisSubscriber.on('message', (channel, message) => {
+    try {
+      const parsed = JSON.parse(message);
+  
+      if (channel === 'newMessage') {
+        io.emit('newMessage', parsed);
+      }
+    } catch (err) {
+      console.error('❌ Error parsing Redis message:', err);
+    }
+  });
 };

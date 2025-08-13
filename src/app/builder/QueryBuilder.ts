@@ -28,7 +28,7 @@ class QueryBuilder<T> {
   // Filter bets
   filter() {
     const queryObj = { ...this.query };
-    const excludeFields = ['search', 'sort', 'limit', 'page', 'fields'];
+    const excludeFields = ['search','sortBy', 'sortOrder', 'sort', 'limit', 'page', 'fields'];
     excludeFields.forEach((field) => delete queryObj[field]);
 
     const filterConditions: Record<string, any> = {};
