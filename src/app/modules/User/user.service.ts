@@ -23,10 +23,12 @@ const createUserIntoDB = async (payload: IUser) => {
     const newUser = new User(payload);
     const result = await newUser.save();
 
-    return await AuthServices.loginUserIntoDB({
+    const userLoginData = await AuthServices.loginUserIntoDB({
       email: result?.email,
       password: payload?.password as string,
     });
+    
+    return userLoginData;
   } catch (error) {
     if (error instanceof AppError) {
       throw error;
