@@ -12,7 +12,7 @@ const createUser = catchAsync(async (req: Request, res: Response) => {
   const user = { ...paylod, id: uuidv4() };
   const result = await UserServices.createUserIntoDB(user);
 
-  const { refreshToken, accessToken } = result;
+  const { refreshToken} = result;
 
   res.cookie('refreshToken', refreshToken, {
     secure: true,
@@ -24,9 +24,7 @@ const createUser = catchAsync(async (req: Request, res: Response) => {
     success: true,
     message: 'User created succesfully!',
     statusCode: StatusCodes.CREATED,
-    data: {
-      token: accessToken,
-    },
+    data: result,
   });
 });
 
