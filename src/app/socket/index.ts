@@ -15,6 +15,9 @@ export const initSocketServer = (server: HTTPServer): void => {
     cors: {
       origin: [
         'http://localhost:3000',
+        'http://localhost:3001',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3001',
         'https://games-client-fqmo.vercel.app',
         'https://games-client-production.up.railway.app',
         'http://192.168.0.183:3000',
@@ -37,6 +40,11 @@ export const initSocketServer = (server: HTTPServer): void => {
   });
 
   console.log('🚀 Socket.IO server initialized');
+
+  // Add connection error handling
+  io.engine.on('connection_error', (err) => {
+    console.error('❌ Socket.IO connection error:', err);
+  });
 
   // 🔐 Authentication middleware
   io.use((socket, next) => {
@@ -72,6 +80,10 @@ export const initSocketServer = (server: HTTPServer): void => {
   // 🎧 Socket connection - Single consolidated handler
   io.on('connection', (socket: Socket) => {
     console.log(`🔌 Client connected: ${socket.id}`);
+    console.log(`📍 Client origin: ${socket.handshake.headers.origin}`);
+    console.log(
+      `📍 Client user-agent: ${socket.handshake.headers['user-agent']}`,
+    );
 
     // Handle user joining room
     socket.on('join', (userId: string) => {
