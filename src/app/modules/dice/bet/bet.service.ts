@@ -1,20 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import crypto from 'crypto';
 import { StatusCodes } from 'http-status-codes';
+import { JwtPayload } from 'jsonwebtoken';
+import { Types } from 'mongoose';
+import { getUserCache } from '../../../../utils/getUserCache';
 import { getRollFromSeed } from '../../../../utils/provablyFair';
 import QueryBuilder from '../../../builder/QueryBuilder';
-import AppError from '../../../error/AppError';
-import { User } from '../../User/user.model';
-import { betSearchFields } from './bet.constant';
-import { BetModel } from './bet.model';
-import { IBet } from './bet.interface';
-import { Types } from 'mongoose';
-import { JwtPayload } from 'jsonwebtoken';
-import { redis } from '../../../lib/redis';
-import { getUserCache } from '../../../../utils/getUserCache';
-import { io } from '../../../socket';
-import { generateNewSeed } from '../fairness/seed.controller';
 import config from '../../../config';
+import AppError from '../../../error/AppError';
+import { redis } from '../../../lib/redis';
+import { io } from '../../../socket';
+import { User } from '../../User/user.model';
+import { generateNewSeed } from '../fairness/seed.controller';
+import { betSearchFields } from './bet.constant';
+import { IBet } from './bet.interface';
+import { BetModel } from './bet.model';
 
 const HOUSE_EDGE = 0.01;
 
@@ -32,9 +32,9 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
     throw new AppError(StatusCodes.BAD_REQUEST, 'Please slow down', '');
   }
 
-  // Step 1: Fetch from Redis
-  let { serverSeed, serverSeedHash } = await getUserCache(userId);
-  const { balance, nonce } = await getUserCache(userId);
+  // Step 1: Fetch from Redis (single call to avoid race conditions)
+  let { balance, nonce, serverSeed, serverSeedHash } =
+    await getUserCache(userId);
   const { amount, prediction, client_secret, type } = data;
   let betAmount: number = amount / 10000;
 
@@ -230,7 +230,7 @@ const getAllBetsFromDB = async (query: Record<string, unknown>) => {
     betId: bet?._id?.toString(),
     amount: bet?.amount,
     gameName: bet?.gameName,
-    createdAt:bet?.createdAt,
+    createdAt: bet?.createdAt,
     result: {
       resultNumber: bet.result?.resultNumber,
       isWin: bet.result?.isWin,
