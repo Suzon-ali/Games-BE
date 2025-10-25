@@ -263,17 +263,3 @@ export const initSocketServer = (server: HTTPServer): void => {
       console.error('❌ Error parsing Redis message:', err);
     }
   });
-
-  // Handle Redis connection errors
-  redisSubscriber.on('error', (err) => {
-    console.error('❌ Redis subscriber error:', err);
-  });
-
-  redisSubscriber.on('connect', () => {
-    console.log('✅ Redis subscriber connected');
-  });
-
-  redisSubscriber.on('reconnecting', () => {
-    console.log('🔄 Redis subscriber reconnecting...');
-  });
-};
