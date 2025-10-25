@@ -18,12 +18,13 @@
     "start": "node dist/server.js",
     "build": "tsc",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "postinstall": "npm run build",
+     "postinstall": "bun add sharp --platform=linux --arch=x64",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "format": "prettier --write \"./src/**/*.{js,ts,json}\"",
     "format:fix": "prettier --write src",
     "test": "jest"
+    
   },
   "dependencies": {
     "@types/bcrypt": "^5.0.2",
