@@ -30,23 +30,24 @@ export const initSocketServer = (server: HTTPServer): void => {
   // 🔐 Authentication middleware
   io.use((socket, next) => {
     let token = socket.handshake.auth?.token;
+  
     if (!token) {
       const rawCookie = socket?.request?.headers?.cookie || '';
       const cookiesParsed = cookie.parse(rawCookie);
       token = cookiesParsed.accessToken;
     }
-
-    if (!token) {
+  
+    if (!token || token === "undefined") {   // 👈 handle invalid case
       console.log('👤 Guest socket connected (no token)');
       return next();
     }
-
+  
     try {
       const decoded = jwt.verify(
         token,
-        config.jwt_access_secret as string,
+        config.jwt_access_secret as string
       ) as JwtPayload;
-
+  
       (socket as any).user = decoded;
       return next();
     } catch (err: any) {
@@ -54,6 +55,7 @@ export const initSocketServer = (server: HTTPServer): void => {
       return next();
     }
   });
+  
 
   // 🎧 Socket connection
   io.on('connection', (socket: Socket) => {
