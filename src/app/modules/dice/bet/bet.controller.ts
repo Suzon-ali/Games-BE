@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
-import catchAsync from '../../../../utils/catchAsync';
-import sendResponse from '../../../../utils/sendResponse';
 import { StatusCodes } from 'http-status-codes';
-import { BetServices } from './bet.service';
-import { calculateHash, getRollFromHash } from '../../../../utils/provablyFair';
 import { JwtPayload } from 'jsonwebtoken';
+import catchAsync from '../../../../utils/catchAsync';
+import { calculateHash, getRollFromHash } from '../../../../utils/provablyFair';
+import sendResponse from '../../../../utils/sendResponse';
+import { BetServices } from './bet.service';
 
 const handleBet = catchAsync(async (req: Request, res: Response) => {
   const bet = req?.body;
@@ -66,19 +66,17 @@ const getMyBets = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getNextSeedHash = catchAsync(
-  async (req: Request, res: Response) => {
-    const result = await BetServices.getNextSeedHashFromDB(
-      req.user as JwtPayload,
-    );
-    sendResponse(res, {
-      statusCode: StatusCodes.OK,
-      success: true,
-      message: 'Next ServerSeedHash Created!',
-      data: result,
-    });
-  },
-);
+const getNextSeedHash = catchAsync(async (req: Request, res: Response) => {
+  const result = await BetServices.getNextSeedHashFromDB(
+    req.user as JwtPayload,
+  );
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Next ServerSeedHash Created!',
+    data: result,
+  });
+});
 
 const rotateServerSeed = catchAsync(async (req: Request, res: Response) => {
   const result = await BetServices.rotateServerSeedIntoDB(
@@ -98,5 +96,5 @@ export const BetControllers = {
   getAllBets,
   getMyBets,
   rotateServerSeed,
-  getNextSeedHash
+  getNextSeedHash,
 };
