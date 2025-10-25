@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import cookie from 'cookie';
 import { Server as HTTPServer } from 'http';
 import jwt, { JwtPayload } from 'jsonwebtoken';
@@ -7,6 +6,21 @@ import config from '../config';
 import { redisSubscriber } from '../lib/redis';
 import { ChatServices } from '../modules/Chat/chat.service';
 import { BetServices } from '../modules/dice/bet/bet.service';
+
+// --- Interface Definition (Assuming it's here or imported) ---
+
+// Define the shape of the user object after JWT decoding
+interface DecodedUser extends JwtPayload {
+  userId?: string;
+  email?: string;
+}
+
+// Extend the base Socket type to include the authenticated user property
+export interface AuthenticatedSocket extends Socket {
+  user: DecodedUser | null;
+}
+
+// --- End Interface Definition ---
 
 export let io: Server;
 
@@ -45,41 +59,45 @@ export const initSocketServer = (server: HTTPServer): void => {
   });
 
   // 🔐 Authentication middleware
-  io.use((socket, next) => {
+  io.use((socket: Socket, next) => {
+    const authSocket = socket as AuthenticatedSocket; // Type assertion once here
+    
     try {
-      let token = socket.handshake.auth?.token;
+      let token = authSocket.handshake.auth?.token;
 
       if (!token) {
-        const rawCookie = socket?.request?.headers?.cookie || '';
+        const rawCookie = authSocket?.request?.headers?.cookie || '';
         const cookiesParsed = cookie.parse(rawCookie);
         token = cookiesParsed.accessToken;
       }
 
       if (!token) {
+        // Allows connection as a guest
         console.log('👤 Guest socket connected (no token)');
-        (socket as any).user = null;
+        authSocket.user = null;
         return next();
       }
 
-      const decoded = jwt.verify(token, config.jwt_access_secret as string) as JwtPayload;
-      (socket as any).user = decoded;
+      const decoded = jwt.verify(token, config.jwt_access_secret as string) as DecodedUser;
+      authSocket.user = decoded;
       console.log(`🔐 Authenticated user: ${decoded.userId || decoded.email}`);
       return next();
     } catch (err: any) {
+      // Invalid token, connects as a guest instead of failing
       console.log('Invalid token, connecting as guest:', err.message);
-      (socket as any).user = null;
+      authSocket.user = null;
       return next();
     }
   });
 
   // 🎧 Unified socket connection
-  io.on('connection', (socket: Socket) => {
+  io.on('connection', (socket: AuthenticatedSocket) => {
     console.log(`🟢 New connection: ${socket.id}`);
 
     // 👤 Join user room
     socket.on('join', (userId: string) => {
       try {
-        const authUser = (socket as any).user;
+        const authUser = socket.user;
         const targetUserId = userId || authUser?.userId;
 
         if (targetUserId) {
@@ -98,13 +116,13 @@ export const initSocketServer = (server: HTTPServer): void => {
         }
       } catch (error: any) {
         console.error('❌ Error joining room:', error);
-        socket.emit('joined', { success: false, error: error.message });
+        socket.emit('joined', { success: false, error: 'Failed to join room' }); // Safer error message
       }
     });
 
     // 🔄 Auto rejoin
     socket.on('rejoin', () => {
-      const authUser = (socket as any).user;
+      const authUser = socket.user;
       if (authUser?.userId) {
         socket.join(authUser.userId);
         socket.join('general');
@@ -115,25 +133,40 @@ export const initSocketServer = (server: HTTPServer): void => {
 
     // 🎲 Dice bet handler
     socket.on('dice:placeBet', async (payload, callback) => {
+      const authUser = socket.user;
+
+      if (!authUser?.userId) {
+        return callback({ success: false, error: 'Authentication required to place a bet.' });
+      }
+
       try {
-        const authUser = (socket as any).user || null;
         const betData = await BetServices.placeBet(payload, authUser);
         callback({ success: true, data: { bet: betData } });
       } catch (err: any) {
         console.error('❌ Error placing bet:', err);
-        callback({ success: false, error: err.message });
+        // Safely return specific error message if it's a known validation error (e.g., "Insufficient funds")
+        const clientErrorMessage = err.message.includes('Insufficient') || err.message.includes('Validation') 
+            ? err.message 
+            : 'Failed to place bet due to a server error.';
+            
+        callback({ success: false, error: clientErrorMessage }); 
       }
     });
 
     // 💬 Chat message handler
     socket.on('sent:Message', async (payload, callback) => {
+      const authUser = socket.user;
+
+      if (!authUser?.userId) {
+        return callback({ success: false, error: 'Authentication required to send a message.' });
+      }
+
       try {
-        const authUser = (socket as any).user || null;
         const messageData = await ChatServices.createChatIntoDB(authUser, payload.message);
         callback({ success: true, data: { message: messageData } });
       } catch (err: any) {
         console.error('❌ Error sending message:', err);
-        callback({ success: false, error: err.message });
+        callback({ success: false, error: 'Failed to send message.' }); // Safer error message
       }
     });
 
