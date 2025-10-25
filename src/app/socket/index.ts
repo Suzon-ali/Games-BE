@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Server as HTTPServer } from 'http';
-import { Server, Socket } from 'socket.io';
-import jwt, { JwtPayload } from 'jsonwebtoken';
-import config from '../config';
 import cookie from 'cookie';
+import { Server as HTTPServer } from 'http';
+import jwt, { JwtPayload } from 'jsonwebtoken';
+import { Server, Socket } from 'socket.io';
+import config from '../config';
 import { redisSubscriber } from '../lib/redis';
-import { BetServices } from '../modules/dice/bet/bet.service';
 import { ChatServices } from '../modules/Chat/chat.service';
+import { BetServices } from '../modules/dice/bet/bet.service';
 
 export let io: Server;
 
@@ -15,6 +15,9 @@ export const initSocketServer = (server: HTTPServer): void => {
     cors: {
       origin: [
         'http://localhost:3000',
+        'http://localhost:3001',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3001',
         'https://games-client-fqmo.vercel.app',
         'https://games-client-production.up.railway.app',
         'http://192.168.0.183:3000',
@@ -23,31 +26,48 @@ export const initSocketServer = (server: HTTPServer): void => {
       methods: ['GET', 'POST'],
       credentials: true,
     },
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    upgradeTimeout: 10000,
+    allowEIO3: true,
+    transports: ['websocket', 'polling'],
+    connectionStateRecovery: {
+      maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
+      skipMiddlewares: true,
+    },
   });
 
   console.log('🚀 Socket.IO server initialized');
 
+  // Connection error handling
+  io.engine.on('connection_error', (err) => {
+    console.error('❌ Socket.IO connection error:', err);
+  });
+
   // 🔐 Authentication middleware
   io.use((socket, next) => {
-    let token = socket.handshake.auth?.token;
-
-    if (!token) {
-      const rawCookie = socket?.request?.headers?.cookie || '';
-      const cookiesParsed = cookie.parse(rawCookie);
-      token = cookiesParsed.accessToken;
-    }
-
-    if (!token || token === 'undefined') {
-      console.log('👤 Guest socket connected (no token)');
-      return next();
-    }
-
     try {
+      let token = socket.handshake.auth?.token;
+
+      if (!token) {
+        const rawCookie = socket?.request?.headers?.cookie || '';
+        const cookiesParsed = cookie.parse(rawCookie);
+        token = cookiesParsed.accessToken;
+      }
+
+      if (!token) {
+        console.log('👤 Guest socket connected (no token)');
+        (socket as any).user = null;
+        return next();
+      }
+
       const decoded = jwt.verify(token, config.jwt_access_secret as string) as JwtPayload;
       (socket as any).user = decoded;
+      console.log(`🔐 Authenticated user: ${decoded.userId || decoded.email}`);
       return next();
     } catch (err: any) {
       console.log('Invalid token, connecting as guest:', err.message);
+      (socket as any).user = null;
       return next();
     }
   });
@@ -58,11 +78,38 @@ export const initSocketServer = (server: HTTPServer): void => {
 
     // 👤 Join user room
     socket.on('join', (userId: string) => {
-      if (userId) {
-        socket.join(userId);
-        console.log(`✅ User ${userId} joined room`);
-      } else {
-        console.log("⚠️ 'join' event called without userId");
+      try {
+        const authUser = (socket as any).user;
+        const targetUserId = userId || authUser?.userId;
+
+        if (targetUserId) {
+          socket.join(targetUserId);
+          socket.join('general');
+          console.log(`✅ User ${targetUserId} joined rooms (socket: ${socket.id})`);
+          socket.emit('joined', {
+            success: true,
+            userId: targetUserId,
+            room: targetUserId,
+            socketId: socket.id,
+          });
+        } else {
+          console.log("⚠️ 'join' event called without userId or auth");
+          socket.emit('joined', { success: false, error: 'User ID is required' });
+        }
+      } catch (error: any) {
+        console.error('❌ Error joining room:', error);
+        socket.emit('joined', { success: false, error: error.message });
+      }
+    });
+
+    // 🔄 Auto rejoin
+    socket.on('rejoin', () => {
+      const authUser = (socket as any).user;
+      if (authUser?.userId) {
+        socket.join(authUser.userId);
+        socket.join('general');
+        console.log(`🔄 User ${authUser.userId} rejoined rooms`);
+        socket.emit('rejoined', { success: true, userId: authUser.userId });
       }
     });
 
@@ -73,6 +120,7 @@ export const initSocketServer = (server: HTTPServer): void => {
         const betData = await BetServices.placeBet(payload, authUser);
         callback({ success: true, data: { bet: betData } });
       } catch (err: any) {
+        console.error('❌ Error placing bet:', err);
         callback({ success: false, error: err.message });
       }
     });
@@ -84,22 +132,44 @@ export const initSocketServer = (server: HTTPServer): void => {
         const messageData = await ChatServices.createChatIntoDB(authUser, payload.message);
         callback({ success: true, data: { message: messageData } });
       } catch (err: any) {
+        console.error('❌ Error sending message:', err);
         callback({ success: false, error: err.message });
       }
     });
 
     // 🔌 Disconnect
-    socket.on('disconnect', () => {
-      console.log(`🔴 Client disconnected: ${socket.id}`);
+    socket.on('disconnect', (reason) => {
+      console.log(`🔴 Client disconnected: ${socket.id}, reason: ${reason}`);
+    });
+
+    // ⚠️ Error handler
+    socket.on('error', (error) => {
+      console.error(`❌ Socket error for ${socket.id}:`, error);
     });
   });
 
-  // 🔔 Redis subscriptions
+  // 🔔 Redis Subscriptions
   redisSubscriber.subscribe('latestBets', (err, count) => {
     if (err) console.error('❌ Redis subscription error:', err);
     else console.log(`📨 Subscribed to 'latestBets' (${count} channels)`);
   });
 
+  redisSubscriber.subscribe('newMessage', (err, count) => {
+    if (err) console.error('❌ Redis subscription error:', err);
+    else console.log(`📨 Subscribed to 'newMessage' (${count} channels)`);
+  });
+
+  redisSubscriber.psubscribe('wallet:update:*', (err, count) => {
+    if (err) console.error('Redis psubscribe error:', err);
+    else console.log(`📨 Subscribed to 'wallet:update:*' (${count} channels)`);
+  });
+
+  redisSubscriber.psubscribe('user:bet:placed:*', (err, count) => {
+    if (err) console.error('Redis psubscribe error:', err);
+    else console.log(`📨 Subscribed to 'user:bet:placed:*' (${count} channels)`);
+  });
+
+  // 🔔 Handle Redis Messages
   redisSubscriber.on('message', (channel, message) => {
     try {
       const parsed = JSON.parse(message);
@@ -110,28 +180,32 @@ export const initSocketServer = (server: HTTPServer): void => {
     }
   });
 
-  redisSubscriber.psubscribe('wallet:update:*', (err, count) => {
-    if (err) console.error('Redis psubscribe error:', err);
-    else console.log(`📨 Subscribed to 'wallet:update:*' (${count} channels)`);
-  });
-
   redisSubscriber.on('pmessage', (pattern, channel, message) => {
-    const parsed = JSON.parse(message);
-    if (pattern === 'wallet:update:*' && parsed?.userId) {
-      io.to(parsed.userId).emit('wallet:update', parsed);
-    }
-    if (pattern === 'user:bet:placed:*' && parsed?.userId) {
-      io.to(parsed.userId).emit('user:bet:placed', parsed);
+    try {
+      const parsed = JSON.parse(message);
+      const userId = parsed?.userId;
+
+      if (pattern === 'wallet:update:*' && userId) {
+        io.to(userId).emit('wallet:update', parsed);
+      }
+      if (pattern === 'user:bet:placed:*' && userId) {
+        io.to(userId).emit('user:bet:placed', parsed);
+      }
+    } catch (err) {
+      console.error('❌ Error parsing Redis pmessage:', err);
     }
   });
 
-  redisSubscriber.psubscribe('user:bet:placed:*', (err, count) => {
-    if (err) console.error('Redis psubscribe error:', err);
-    else console.log(`📨 Subscribed to 'user:bet:placed:*' (${count} channels)`);
+  // 🔁 Redis Connection Events
+  redisSubscriber.on('error', (err) => {
+    console.error('❌ Redis subscriber error:', err);
   });
 
-  redisSubscriber.subscribe('newMessage', (err, count) => {
-    if (err) console.error('❌ Redis subscription error:', err);
-    else console.log(`📨 Subscribed to 'newMessage' (${count} channels)`);
+  redisSubscriber.on('connect', () => {
+    console.log('✅ Redis subscriber connected');
+  });
+
+  redisSubscriber.on('reconnecting', () => {
+    console.log('🔄 Redis subscriber reconnecting...');
   });
 };
