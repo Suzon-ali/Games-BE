@@ -12,6 +12,7 @@ export const registerChatEvents = (io: Server) => {
           authUser,
           payload.message,
         );
+        console.log(payload)
         callback({ success: true, data: { message: messageData } });
       } catch (err: any) {
         callback({ success: false, error: err.message });

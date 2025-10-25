@@ -2,6 +2,7 @@ import { StatusCodes } from 'http-status-codes';
 import catchAsync from '../../../utils/catchAsync';
 import { AuthServices } from './auth.service';
 import sendResponse from '../../../utils/sendResponse';
+import { serialize } from 'cookie';
 
 const loginUser = catchAsync(async (req, res) => {
   const user = req.body;
@@ -9,12 +10,31 @@ const loginUser = catchAsync(async (req, res) => {
 
   const { refreshToken, accessToken, userInfo } = result;
 
-  res.cookie('refreshToken', refreshToken, {
-    secure: true,
-    httpOnly: true,
-    sameSite: 'none',
-    //domain: 'games-client-jp6a.vercel.app',
-  });
+  // res.cookie('refreshToken', refreshToken, {
+  //   secure: true,
+  //   httpOnly: true,
+  //   sameSite: 'none',
+  //   //domain: 'games-client-jp6a.vercel.app',
+  // });
+
+  res.setHeader("Set-Cookie", [
+    serialize("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
+      path: "/",
+      domain: ".rolltoday.online",
+      maxAge: 60 * 60 * 24,
+    }),
+    serialize("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
+      path: "/",
+      domain: ".rolltoday.online",
+      maxAge: 60 * 60 * 24 * 7,
+    }),
+  ]);
 
   sendResponse(res, {
     success: true,

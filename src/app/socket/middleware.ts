@@ -8,11 +8,14 @@ export const applySocketMiddleware = (io: Server) => {
   io.use((socket: Socket, next) => {
     let token = socket.handshake.auth?.token;
     console.log(token,'hand shake')
+
     if (!token) {
       const rawCookie = socket?.request?.headers?.cookie || '';
       const cookiesParsed = cookie.parse(rawCookie);
       token = cookiesParsed.accessToken;
     }
+
+    console.log(token,'from cookie')
 
     if (!token) {
       console.log('👤 Guest socket connected (no token)');
