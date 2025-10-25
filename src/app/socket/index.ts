@@ -6,9 +6,12 @@ import config from '../config';
 import cookie from 'cookie';
 import { redisSubscriber } from '../lib/redis';
 import { BetServices } from '../modules/dice/bet/bet.service';
+
 import { ChatServices } from '../modules/Chat/chat.service';
 
 export let io: Server;
+
+
 
 export const initSocketServer = (server: HTTPServer): void => {
   io = new Server(server, {
