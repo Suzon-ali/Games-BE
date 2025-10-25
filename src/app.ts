@@ -15,7 +15,7 @@ app.use(cookieParser());
 app.set("trust proxy", 1);
 app.use(
   cors({
-    origin: ['http://localhost:3000','http://192.168.0.183:3000', 'https://games-client-jp6a.vercel.app', 'https://games-client-fqmo.vercel.app', 'https://games-client-production.up.railway.app', 'https://rolltoday.online'],
+    origin: ['http://localhost:3000','http://192.168.0.183:3000', 'https://games-client-jp6a.vercel.app', 'https://games-client-fqmo.vercel.app', 'https://games-client-production.up.railway.app', 'https://rolltoday.online', 'https://dev.rolltoday.online'],
     credentials: true,
   }),
 );
