@@ -31,10 +31,16 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
   if (!lock) {
     throw new AppError(StatusCodes.BAD_REQUEST, 'Please slow down', '');
   }
+  console.log(userId ,"here")
+
+  if (!userId) {
+    throw new AppError(StatusCodes.UNAUTHORIZED, 'User not authenticated', '');
+  }
+  
 
   // Step 1: Fetch from Redis (single call to avoid race conditions)
-  let { balance, nonce, serverSeed, serverSeedHash } =
-    await getUserCache(userId);
+  // eslint-disable-next-line prefer-const
+  let { balance, nonce, serverSeed, serverSeedHash } = await getUserCache(userId);
   const { amount, prediction, client_secret, type } = data;
   let betAmount: number = amount / 10000;
 

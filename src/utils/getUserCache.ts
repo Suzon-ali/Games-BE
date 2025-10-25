@@ -13,6 +13,7 @@ export async function getUserCache(
   serverSeedHash: string;
 }> {
   // Validate userId
+  console.log(userId, "in getUserCache")
   if (!userId || typeof userId !== 'string' || userId.trim() === '') {
     throw new Error('Invalid userId provided to getUserCache');
   }
