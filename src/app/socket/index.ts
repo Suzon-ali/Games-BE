@@ -39,7 +39,7 @@ export const initSocketServer = (server: HTTPServer): void => {
 
   console.log('🚀 Socket.IO server initialized');
 
-  // Connection error handling
+  // Handle connection errors
   io.engine.on('connection_error', (err) => {
     console.error('❌ Socket.IO connection error:', err);
   });
