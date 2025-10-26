@@ -72,9 +72,9 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
   const rollNumber = rawResult / 100;
 
   const isWin =
-    type === 'over' ? rollNumber > prediction : rollNumber < prediction;
-  const chance = type === 'over' ? 1 - prediction : prediction;
-  const payout = parseFloat(((1 / chance) * (1 - HOUSE_EDGE)).toFixed(4));
+    type === 'over' ? rollNumber > prediction! : rollNumber < prediction!;
+  const chance = type === 'over' ? 1 - prediction! : prediction;
+  const payout = parseFloat(((1 / chance!) * (1 - HOUSE_EDGE)).toFixed(4));
 
   const profit = isWin ? (amount * (payout - 1)) / 10000 : -betAmount;
   const payoutToPlayer = isWin ? betAmount + profit : 0;
@@ -89,7 +89,7 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
     previousBalance: balance,
     endingBalance: newBalance,
     amount: betAmount,
-    prediction: prediction * 100,
+    prediction: prediction! * 100,
     type,
     client_secret,
     nonce: nonce,
@@ -152,6 +152,7 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
             resultNumber: rawResult,
             isWin,
           },
+          gameName: bet?.gameName,
           userId,
           userName: authUser?.userName,
         }),
