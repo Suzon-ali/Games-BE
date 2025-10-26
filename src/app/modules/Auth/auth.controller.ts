@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes';
 import catchAsync from '../../../utils/catchAsync';
-import { AuthServices } from './auth.service';
 import sendResponse from '../../../utils/sendResponse';
+import { AuthServices } from './auth.service';
 
 const loginUser = catchAsync(async (req, res) => {
   const user = req.body;
@@ -9,11 +9,20 @@ const loginUser = catchAsync(async (req, res) => {
 
   const { refreshToken, accessToken, userInfo } = result;
 
+  // Set both tokens as cookies for client-side access
   res.cookie('refreshToken', refreshToken, {
     secure: true,
     httpOnly: true,
     sameSite: 'none',
     domain: '.rolltoday.online',
+  });
+
+  res.cookie('accessToken', accessToken, {
+    secure: true,
+    httpOnly: true,
+    sameSite: 'none',
+    domain: '.rolltoday.online',
+    maxAge: 1000 * 60 * 60 * 24, // 24 hours
   });
 
   sendResponse(res, {
@@ -32,6 +41,18 @@ const refreshToken = catchAsync(async (req, res) => {
   const refreshToken =
     req.cookies.refreshToken || req.headers['x-refresh-token'];
   const result = await AuthServices.refreshToken(refreshToken);
+
+  // Set the new accessToken as a cookie
+  if (result?.accessToken) {
+    res.cookie('accessToken', result.accessToken, {
+      secure: true,
+      httpOnly: true,
+      sameSite: 'none',
+      domain: '.rolltoday.online',
+      maxAge: 1000 * 60 * 60 * 24, // 24 hours
+    });
+  }
+
   sendResponse(res, {
     success: true,
     message: 'AccessToken is created succesfully!',
