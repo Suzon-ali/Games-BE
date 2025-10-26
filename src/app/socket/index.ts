@@ -1,12 +1,10 @@
-
 import { Server as HTTPServer } from 'http';
 import { Server } from 'socket.io';
-import { applySocketMiddleware } from './middleware';
+import { registerChatEvents } from './events/chat';
 import { registerConnectionEvents } from './events/connection';
 import { registerDiceEvents } from './events/dice';
-import { registerChatEvents } from './events/chat';
 import { initRedisSubscribers } from './events/redis';
-
+import { applySocketMiddleware } from './middleware';
 
 export let io: Server;
 
