@@ -7,14 +7,29 @@ import { initSocketServer } from './app/socket';
 
 async function main() {
   try {
-    await mongoose.connect(config.database_url as string);
+    // MongoDB connection with better error handling
+    if (!config.database_url) {
+      throw new Error('Database URL is not defined in environment variables');
+    }
+
+    await mongoose.connect(config.database_url, {
+      serverSelectionTimeoutMS: 10000, // 10 seconds timeout
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+    });
+
+    console.log('✅ Database connected successfully');
+
     const server = createServer(app);
     initSocketServer(server);
-    server.listen(config.port, () => {
-      console.log(`App is running on port ${config.port}`);
+
+    const PORT = config.port || 5000;
+    server.listen(PORT, () => {
+      console.log(`✅ App is running on port ${PORT}`);
     });
   } catch (error) {
-    console.log(error);
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
   }
 }
 
