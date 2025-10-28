@@ -14,7 +14,7 @@ const BetSchema = new Schema<IBet>(
     previousBalance: { type: Number, min: 0 },
     endingBalance: { type: Number, min: 0 },
     amount: { type: Number, required: true },
-    prediction: { type: Number, required: true },
+    prediction: { type: Number},
     client_secret: { type: String, required: true },
     nonce: { type: Number, required: true },
     serverSeed: { type: String, required: true },
@@ -22,8 +22,8 @@ const BetSchema = new Schema<IBet>(
     type: {
       type: String,
       enum: ['over', 'under'],
-      required: true,
     },
+    targetMultiplier: { type: String },
     result: {
       resultNumber: { type: Number },
       rollNumber: { type: Number },
@@ -32,6 +32,7 @@ const BetSchema = new Schema<IBet>(
       profit: { type: Number },
       multiplier: { type: Number },
       payoutToThePlayer: { type: Number },
+      multiplier_hit: { type: Number },
     },
   },
   { timestamps: true },

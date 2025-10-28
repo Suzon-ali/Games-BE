@@ -7,23 +7,25 @@ export interface IBet {
   previousBalance: number;
   endingBalance: number;
   amount: number;
-  prediction: number;
+  prediction?: number;
   client_secret: string;
   nonce: number;
   serverSeed?: string;
   serverSeedHash?: string;
   prevServerSeed?: string;
-  type: 'over' | 'under';
+  type?: 'over' | 'under';
+  targetMultiplier?: number;
   createdAt: string;
   updatedAt: string;
-  result?: {
-    resultNumber: number;
-    rollNumber: number;
+  result: {
+    resultNumber?: number;
+    rollNumber?: number;
     isWin: boolean;
     payout: number;
     profit: number;
     multiplier: number;
     payoutToThePlayer: number;
+    multiplier_hit?: number;
   };
 }
 
