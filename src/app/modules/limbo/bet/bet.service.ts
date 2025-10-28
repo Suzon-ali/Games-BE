@@ -196,6 +196,7 @@ const placeLimboBet = async (data: IBet, authUser: JwtPayload) => {
         type: isWin ? 'win' : 'lose',
         multiplier: isWin? targetMultiplier : 0.00,
         winnings: parseFloat((payoutToThePlayer * 10000).toFixed(0)),
+        multiplier_hit: multiplier,
       },
     },
     next_hash: nextServerSeedHash,

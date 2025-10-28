@@ -3,7 +3,7 @@
 import { Server } from 'socket.io';
 import { LimboBetServices } from '../../modules/limbo/bet/bet.service';
 
-export const registerDiceEvents = (io: Server) => {
+export const registerLimboEvents = (io: Server) => {
   io.on('connection', (socket) => {
     socket.on('limbo:placeBet', async (payload, callback) => {
       try {

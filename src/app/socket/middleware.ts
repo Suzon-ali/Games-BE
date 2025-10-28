@@ -7,12 +7,12 @@ import config from '../config';
 export const applySocketMiddleware = (io: Server) => {
   io.use((socket: Socket, next) => {
     // Log full handshake data for debugging
-    console.log('🔍 Socket handshake data:', {
-      auth: socket.handshake.auth,
-      headers: socket.request.headers,
-      cookies: socket.request.headers.cookie,
-      query: socket.handshake.query,
-    });
+    // console.log('🔍 Socket handshake data:', {
+    //   auth: socket.handshake.auth,
+    //   headers: socket.request.headers,
+    //   cookies: socket.request.headers.cookie,
+    //   query: socket.handshake.query,
+    // });
 
     // Try to get token from auth object first
     let token = socket.handshake.auth?.token;

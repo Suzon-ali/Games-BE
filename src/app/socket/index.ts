@@ -5,6 +5,7 @@ import { registerConnectionEvents } from './events/connection';
 import { registerDiceEvents } from './events/dice';
 import { initRedisSubscribers } from './events/redis';
 import { applySocketMiddleware } from './middleware';
+import { registerLimboEvents } from './events/limbo';
 
 export let io: Server;
 
@@ -33,6 +34,7 @@ export const initSocketServer = (server: HTTPServer): void => {
   registerConnectionEvents(io);
   registerDiceEvents(io);
   registerChatEvents(io);
+  registerLimboEvents(io);
 
   // Setup Redis pub/sub
   initRedisSubscribers(io);
