@@ -6,6 +6,7 @@ import router from './app/routes';
 import globalErrorHandler from './app/miiddlewares/globalErrorHandler';
 import notFoundHandler from './app/miiddlewares/notFoundHandler';
 import { StatusCodes } from 'http-status-codes';
+import { startBotChat } from './app/modules/Chat/chat.bot';
 
 const app: Application = express();
 
@@ -51,6 +52,7 @@ app.get('/', (req: Request, res: Response) => {
 
 app.use(globalErrorHandler);
 app.use(notFoundHandler);
+startBotChat()
 
 
 
