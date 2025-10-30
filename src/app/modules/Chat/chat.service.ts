@@ -4,7 +4,6 @@ import { User } from '../User/user.model';
 import ChatModel from './chat.model';
 import QueryBuilder from '../../builder/QueryBuilder';
 import { chatSearchFields } from './chat.constant';
-import { io } from '../../socket';
 import { redis } from '../../lib/redis';
 import { JwtPayload } from 'jsonwebtoken';
 
@@ -35,12 +34,7 @@ const createChatIntoDB = async (authUser: JwtPayload, message: string) => {
     };
 
     // Make sure channel name is consistent with subscriber
-    await redis.publish('newMessage', JSON.stringify(publishPayload));
-
-    if (io) {
-      // This assumes userId corresponds to a socket room or socket id
-      io.to(userId).emit('sent:Message', publishPayload);
-    }
+    await redis.publish("newMessage", JSON.stringify(publishPayload));
 
     return publishPayload;
   } catch (error) {
