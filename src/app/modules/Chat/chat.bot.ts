@@ -3,7 +3,7 @@ import { botUsers, ChatMessages } from './chat.constant';
 import { JwtPayload } from 'jsonwebtoken';
 
 const BOT_INTERVAL_MIN = 1000; // 1 seconds
-const BOT_INTERVAL_MAX = 5000; // 5 seconds
+const BOT_INTERVAL_MAX = 20000; // 20 seconds
 
 export const startBotChat = async () => {
   const sendBotMessage = async () => {
