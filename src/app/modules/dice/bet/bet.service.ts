@@ -52,7 +52,7 @@ const placeBet = async (data: IBet, authUser: JwtPayload) => {
     betAmount = maxBetAmount as number;
   }
 
-  if (betAmount < (minBetAmount as number)) {
+  if (betAmount < (minBetAmount as number) && betAmount !== 0) {
     betAmount = minBetAmount as number;
     throw new AppError(StatusCodes.BAD_REQUEST, 'Bet is less than min', '');
   }

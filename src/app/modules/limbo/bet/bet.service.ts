@@ -64,7 +64,7 @@ const placeLimboBet = async (data: IBet, authUser: JwtPayload) => {
   if (balance < betAmount)
     throw new AppError(StatusCodes.BAD_REQUEST, 'Insufficient balance', '');
   if (betAmount > maxBetAmount) betAmount = maxBetAmount;
-  if (betAmount < minBetAmount)
+  if (betAmount < minBetAmount && betAmount !== 0)
     throw new AppError(StatusCodes.BAD_REQUEST, 'Bet is less than min', '');
 
   // Ensure seeds
