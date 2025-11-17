@@ -6,6 +6,8 @@ import { User } from './user.model';
 import { AuthServices } from '../Auth/auth.service';
 import { redis } from '../../lib/redis';
 import { BetModel } from '../dice/bet/bet.model';
+import QueryBuilder from '../../builder/QueryBuilder';
+import { userSearchFields } from './user.constant';
 
 const createUserIntoDB = async (payload: IUser) => {
   try {
@@ -27,7 +29,7 @@ const createUserIntoDB = async (payload: IUser) => {
       email: result?.email,
       password: payload?.password as string,
     });
-    
+
     return userLoginData;
   } catch (error) {
     if (error instanceof AppError) {
@@ -69,7 +71,7 @@ const getUserBetStatsFromDB = async (userName: string) => {
   if (!userExists) {
     throw new AppError(StatusCodes.NOT_FOUND, 'User not found', '');
   }
-  const user = await User.findOne({userName});
+  const user = await User.findOne({ userName });
 
   try {
     const result = await BetModel.aggregate([
@@ -87,11 +89,76 @@ const getUserBetStatsFromDB = async (userName: string) => {
       userName,
       totalBets: result.length > 0 ? result[0].totalBets : 0,
       totalWagered: result.length > 0 ? result[0].totalWagered : 0,
-      createdAt: user?.createdAt
+      createdAt: user?.createdAt,
     };
   } catch (error) {
     console.error('Error fetching user bet stats:', error);
   }
+};
+
+const getAllUsersFromDB = async (
+  query: Record<string, unknown>,
+) => {
+  const baseQuery = User.find();
+
+  const userQuery = new QueryBuilder(baseQuery, query)
+    .search(userSearchFields.userSearchableFields)
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const result = await userQuery.modelQuery
+    .select(
+      '-password -serverSeed -clientSeed -nextServerSeed -nextServerSeedHash -serverSeedHash',
+    )
+    .lean();
+
+  return result;
+};
+
+const getUserByIdFromDB = async (userId: string) => {
+  const result = await User.findById(userId)
+    .select(
+      '-password -serverSeed -clientSeed -nextServerSeed -nextServerSeedHash -serverSeedHash',
+    )
+    .lean();
+
+  return result;
+};
+
+const addCashbackToUser = async (userId: string, amount: number) => {
+  const userKey = `user:${userId}`;
+  if (amount <= 0) {
+    throw new AppError(
+      StatusCodes.BAD_REQUEST,
+      'Amount must be bigger than 0',
+      '',
+    );
+  }
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $inc: { balance: amount } },
+    { new: true },
+  );
+
+  if (!user) throw new AppError(StatusCodes.NOT_FOUND, 'user not found', '');
+
+  // Update redis
+  await redis.hset(userKey, {
+    balance: user!.balance!.toString(),
+  });
+
+  redis.publish(
+    `wallet:update:${userId}`,
+    JSON.stringify({
+      userId,
+      balance: user.balance,
+    }),
+  );
+
+  return { balance: user.balance };
 };
 
 export const UserServices = {
@@ -99,4 +166,7 @@ export const UserServices = {
   getMyBalanceFromDB,
   userLogout,
   getUserBetStatsFromDB,
+  getAllUsersFromDB,
+  getUserByIdFromDB,
+  addCashbackToUser,
 };

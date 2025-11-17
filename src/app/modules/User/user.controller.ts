@@ -12,7 +12,7 @@ const createUser = catchAsync(async (req: Request, res: Response) => {
   const user = { ...paylod, id: uuidv4() };
   const result = await UserServices.createUserIntoDB(user);
 
-  const { refreshToken} = result;
+  const { refreshToken } = result;
 
   res.cookie('refreshToken', refreshToken, {
     secure: true,
@@ -63,9 +63,54 @@ const getUserBetStats = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+export const getAllUsers = catchAsync(async (req: Request, res: Response) => {
+
+  // Pass request query instead of userId
+  const result = await UserServices.getAllUsersFromDB(req.query);
+
+  sendResponse(res, {
+    success: true,
+    message: 'Users fetched successfully!',
+    statusCode: StatusCodes.OK,
+    data: result,
+  });
+});
+
+const getUserById = catchAsync(async (req: Request, res: Response) => {
+  const userId = req?.params?.userId;
+
+  // Pass request query instead of userId
+  const result = await UserServices.getUserByIdFromDB(userId);
+
+  sendResponse(res, {
+    success: true,
+    message: 'Users fetched successfully!',
+    statusCode: StatusCodes.OK,
+    data: result,
+  });
+});
+
+const addCashback = catchAsync(async (req: Request, res: Response) => {
+  const userId = req?.body?.userId;
+  const amount = req?.body?.amount;
+
+  // Pass request query instead of userId
+  const result = await UserServices.addCashbackToUser(userId, amount);
+
+  sendResponse(res, {
+    success: true,
+    message: 'Cashback added!',
+    statusCode: StatusCodes.OK,
+    data: result,
+  });
+});
+
 export const UserControllers = {
   createUser,
   getMyBalance,
   logOut,
-  getUserBetStats
+  getUserBetStats,
+  getAllUsers,
+  getUserById,
+  addCashback,
 };
