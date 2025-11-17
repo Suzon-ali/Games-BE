@@ -3,6 +3,7 @@ import { BetRoutes } from '../modules/dice/bet/bet.routes';
 import { UserRoutes } from '../modules/User/user.route';
 import { AuthRoutes } from '../modules/Auth/auth.route';
 import { ChatRoutes } from '../modules/Chat/chat.route';
+import { AdminRoutes } from '../modules/User/admin/admin.routes';
 
 const router = Router();
 
@@ -22,6 +23,10 @@ const moduleRoutes = [
   {
     path: '/chat',
     route: ChatRoutes,
+  },
+  {
+    path: '/admin',
+    route: AdminRoutes,
   },
 ];
 

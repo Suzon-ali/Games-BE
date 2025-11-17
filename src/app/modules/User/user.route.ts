@@ -14,6 +14,7 @@ router.post(
 );
 router.get('/mybalance', auth('user'), UserControllers.getMyBalance);
 router.post('/logout', auth('user'), UserControllers.logOut);
-router.post('/getUserBetStats', UserControllers.getUserBetStats)
+router.post('/getUserBetStats', UserControllers.getUserBetStats);
+router.get('/getAllUsers', auth('admin'), UserControllers.getAllUsers);
 
 export const UserRoutes = router;
